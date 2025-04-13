@@ -16,7 +16,34 @@ const collections = [
     color: '#8B5CF6',
     createdBy: 'user1',
     isShared: true,
-    sharedWith: ['user2', 'user3']
+    sharedWith: ['user2', 'user3'],
+    parentId: null,
+  },
+  { 
+    id: '1.1', 
+    name: 'Hero Section', 
+    description: 'Hero section assets for homepage',
+    items: ['1', '8'],
+    created: '2025-03-11',
+    modified: '2025-03-15',
+    color: '#8B5CF6',
+    createdBy: 'user1',
+    isShared: true,
+    sharedWith: ['user2', 'user3'],
+    parentId: '1',
+  },
+  { 
+    id: '1.2', 
+    name: 'Product Features', 
+    description: 'Product feature assets for homepage',
+    items: ['3'],
+    created: '2025-03-12',
+    modified: '2025-03-15',
+    color: '#8B5CF6',
+    createdBy: 'user1',
+    isShared: true,
+    sharedWith: ['user2', 'user3'],
+    parentId: '1',
   },
   { 
     id: '2', 
@@ -28,7 +55,21 @@ const collections = [
     color: '#10B981',
     createdBy: 'user1',
     isShared: true,
-    sharedWith: ['user2']
+    sharedWith: ['user2'],
+    parentId: null,
+  },
+  { 
+    id: '2.1', 
+    name: 'Social Media Assets', 
+    description: 'Social media assets for Spring campaign',
+    items: ['5', '6'],
+    created: '2025-02-22',
+    modified: '2025-02-28',
+    color: '#10B981',
+    createdBy: 'user1',
+    isShared: true,
+    sharedWith: ['user2'],
+    parentId: '2',
   },
   { 
     id: '3', 
@@ -40,7 +81,8 @@ const collections = [
     color: '#F43F5E',
     createdBy: 'user3',
     isShared: true,
-    sharedWith: ['user1']
+    sharedWith: ['user1'],
+    parentId: null,
   },
   { 
     id: '4', 
@@ -52,7 +94,8 @@ const collections = [
     color: '#0EA5E9',
     createdBy: 'user1',
     isShared: false,
-    sharedWith: []
+    sharedWith: [],
+    parentId: null,
   },
   { 
     id: '5', 
@@ -64,7 +107,8 @@ const collections = [
     color: '#F97316',
     createdBy: 'user2',
     isShared: true,
-    sharedWith: ['user1', 'user3', 'user4']
+    sharedWith: ['user1', 'user3', 'user4'],
+    parentId: null,
   },
   { 
     id: '6', 
@@ -76,7 +120,8 @@ const collections = [
     color: '#6366F1',
     createdBy: 'user3',
     isShared: true,
-    sharedWith: ['user1', 'user5']
+    sharedWith: ['user1', 'user5'],
+    parentId: null,
   },
   { 
     id: '7', 
@@ -88,7 +133,8 @@ const collections = [
     color: '#14B8A6',
     createdBy: 'user1',
     isShared: true,
-    sharedWith: ['user2', 'user3', 'user4', 'user5']
+    sharedWith: ['user2', 'user3', 'user4', 'user5'],
+    parentId: null,
   }
 ];
 

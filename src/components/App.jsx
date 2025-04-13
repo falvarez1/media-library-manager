@@ -6,9 +6,12 @@ import MediaContent from './MediaContent';
 import DetailsSidebar from './DetailsSidebar';
 import MediaEditor from './MediaEditor';
 import QuickView from './QuickView';
-import { useCreateFolder } from '../hooks/useApi';
+import { 
+  useCreateFolder, useMedia, useCollections, useCreateCollection, 
+  useUpdateCollection, useDeleteCollection, useTags
+} from '../hooks/useApi';
 import FilterBar from './FilterBar';
-import { useMedia } from '../hooks/useApi';
+import CollectionModal from './CollectionModal';
 
 const App = () => {
   // Core state
@@ -21,6 +24,7 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterActive, setFilterActive] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]);
   const [filters, setFilters] = useState({
     types: [],
     tags: [],
@@ -37,8 +41,31 @@ const App = () => {
   const [showUploader, setShowUploader] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [showNewCollectionModal, setShowNewCollectionModal] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
+  
+  // Fetch collections data
+  const { data: collectionsData, loading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useCollections();
+  
+  // Fetch tags data
+  const { data: tagsData, loading: tagsLoading, error: tagsError } = useTags();
+  
+  // Collection operations
+  const { createCollection, loading: createCollectionLoading } = useCreateCollection();
+  const { updateCollection, loading: updateCollectionLoading } = useUpdateCollection();
+  const { deleteCollection, loading: deleteCollectionLoading } = useDeleteCollection();
+  
+  // Update filters when tags are selected
+  useEffect(() => {
+    if (selectedTags.length > 0) {
+      setFilters(prev => ({...prev, tags: selectedTags}));
+      setFilterActive(true);
+    } else if (selectedTags.length === 0 && filters.tags.length > 0) {
+      setFilters(prev => ({...prev, tags: []}));
+      setFilterActive(filters.types.length > 0 || filters.status.length > 0 || filters.usage !== null);
+    }
+  }, [selectedTags, filters.tags.length, filters.types.length, filters.status.length, filters.usage]);
   
   // Handle folder navigation
   const handleFolderClick = (folderId) => {
@@ -81,10 +108,58 @@ const App = () => {
     setShowQuickView(false);
   };
   
+  // Collection operations
+  const handleCreateCollection = async (collectionData) => {
+    try {
+      await createCollection(collectionData);
+      
+      // Refresh collections
+      refetchCollections();
+      
+      // Close modal
+      setShowNewCollectionModal(false);
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+    }
+  };
+  
+  const handleUpdateCollection = async (id, updates) => {
+    try {
+      await updateCollection(id, updates);
+      
+      // Refresh collections
+      refetchCollections();
+    } catch (error) {
+      console.error('Failed to update collection:', error);
+    }
+  };
+  
+  const handleDeleteCollection = async (id) => {
+    try {
+      await deleteCollection(id, { deleteChildren: true });
+      
+      // Refresh collections
+      refetchCollections();
+      
+      // If the deleted collection was the current one, go back to all media
+      if (currentCollection === id) {
+        setCurrentView('folder');
+        setCurrentFolder('all');
+      }
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
+    }
+  };
+  
   // Handle search
   const handleSearch = (term) => {
     setSearchTerm(term);
     if (term) setCurrentView('search');
+  };
+  
+  // Handle tag filtering
+  const handleTagFilter = (tags) => {
+    setSelectedTags(tags);
   };
   
   // Handle media selection
@@ -141,6 +216,18 @@ const App = () => {
     setShowQuickView(false);
   };
   
+  // Handle star toggle
+  const handleToggleStar = async (mediaId) => {
+    console.log('Toggle star for:', mediaId);
+    // We would implement the actual API call here
+  };
+  
+  // Handle favorite toggle
+  const handleToggleFavorite = async (mediaId) => {
+    console.log('Toggle favorite for:', mediaId);
+    // We would implement the actual API call here
+  };
+  
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -188,6 +275,13 @@ const App = () => {
             >
               <Folders size={15} />
               <span>New Folder</span>
+            </button>
+            <button 
+              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md flex items-center space-x-1"
+              onClick={() => setShowNewCollectionModal(true)}
+            >
+              <Folders size={15} className="text-blue-500" />
+              <span>New Collection</span>
             </button>
           </div>
         </div>
@@ -254,6 +348,7 @@ const App = () => {
           setFilters={setFilters}
           setFilterActive={setFilterActive}
           onClose={() => setShowFilters(false)}
+          tags={tagsData}
         />
       )}
 
@@ -270,6 +365,7 @@ const App = () => {
             onFolderClick={handleFolderClick}
             onCollectionClick={handleCollectionClick}
             onViewChange={setCurrentView}
+            onTagFilter={handleTagFilter}
           />
         )}
         
@@ -286,6 +382,11 @@ const App = () => {
           onQuickView={handleQuickView}
           onOpenEditor={openEditor}
           onFolderClick={handleFolderClick}
+          onCollectionClick={handleCollectionClick}
+          collections={collectionsData?.items || []}
+          tags={tagsData || []}
+          onUpdateCollection={handleUpdateCollection}
+          onAddToCollection={handleCreateCollection}
         />
         
         {/* Details sidebar */}
@@ -294,6 +395,8 @@ const App = () => {
             mediaId={selectedMedia[0]}
             onClose={() => setShowDetails(false)}
             onOpenEditor={openEditor}
+            onToggleStar={handleToggleStar}
+            onToggleFavorite={handleToggleFavorite}
           />
         )}
       </div>
@@ -310,8 +413,8 @@ const App = () => {
           onOpenEditor={openEditor}
           onNavigateNext={handleNavigateNext}
           onNavigatePrevious={handleNavigatePrevious}
-          onToggleStar={(id) => console.log('Toggle star for', id)}
-          onToggleFavorite={(id) => console.log('Toggle favorite for', id)}
+          onToggleStar={handleToggleStar}
+          onToggleFavorite={handleToggleFavorite}
         />
       )}
       
@@ -328,6 +431,16 @@ const App = () => {
         onClose={() => setShowNewFolderModal(false)}
         title="Create Folder"
         onSubmit={handleCreateFolder}
+        submitButtonText="Create"
+      />
+      
+      {/* Collection management modals */}
+      <CollectionModal
+        isOpen={showNewCollectionModal}
+        onClose={() => setShowNewCollectionModal(false)}
+        title="Create Collection"
+        onSubmit={handleCreateCollection}
+        collections={collectionsData?.items || []}
         submitButtonText="Create"
       />
     </div>

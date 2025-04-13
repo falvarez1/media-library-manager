@@ -1,9 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus } from 'lucide-react';
+import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus, X, AlertCircle, Filter } from 'lucide-react';
 import FolderModal from './FolderModal';
 import FolderContextMenu from './FolderContextMenu';
 import ConfirmationDialog from './ConfirmationDialog';
-import { useFolders, useCollections, useTags, useCreateFolder, useUpdateFolder, useDeleteFolder } from '../hooks/useApi';
+import CollectionNavigation from './CollectionNavigation';
+import TagManager from './TagManager';
+import TagSelector from './TagSelector';
+import CollectionModal from './CollectionModal';
+import { 
+  useFolders, useCollections, useTags, useTagCategories, 
+  useCreateFolder, useUpdateFolder, useDeleteFolder,
+  useCreateCollection, useUpdateCollection, useDeleteCollection,
+  useCreateTag, useUpdateTag, useDeleteTag
+} from '../hooks/useApi';
 
 const FolderNavigation = ({
   currentFolder,
@@ -13,10 +22,13 @@ const FolderNavigation = ({
   setSidebarTab,
   onFolderClick,
   onCollectionClick,
-  onViewChange
+  onViewChange,
+  onTagFilter
 }) => {
   // Core state
   const [expandedFolders, setExpandedFolders] = useState(['1', '2', '3']); // Default expanded folders
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [smartCollections, setSmartCollections] = useState([]);
   
   // Folder management state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
@@ -24,6 +36,12 @@ const FolderNavigation = ({
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [selectedFolderForAction, setSelectedFolderForAction] = useState(null);
   const [parentFolderForCreate, setParentFolderForCreate] = useState(null);
+  
+  // Tag management state
+  const [showTagManager, setShowTagManager] = useState(false);
+  
+  // Collection management state
+  const [showCreateSmartCollection, setShowCreateSmartCollection] = useState(false);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState({
@@ -39,13 +57,19 @@ const FolderNavigation = ({
   
   // Fetch data using hooks
   const { data: folders, loading: foldersLoading, error: foldersError, refetch: refetchFolders } = useFolders();
-  const { data: collections, loading: collectionsLoading, error: collectionsError } = useCollections();
-  const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
+  const { data: collections, loading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useCollections();
+  const { data: tags, loading: tagsLoading, error: tagsError, refetch: refetchTags } = useTags();
+  const { data: tagCategories } = useTagCategories();
   
   // Folder operation hooks
-  const { createFolder, loading: createLoading } = useCreateFolder();
-  const { updateFolder, loading: updateLoading } = useUpdateFolder();
-  const { deleteFolder, loading: deleteLoading } = useDeleteFolder();
+  const { createFolder, loading: createFolderLoading } = useCreateFolder();
+  const { updateFolder, loading: updateFolderLoading } = useUpdateFolder();
+  const { deleteFolder, loading: deleteFolderLoading } = useDeleteFolder();
+  
+  // Collection operation hooks
+  const { createCollection, loading: createCollectionLoading } = useCreateCollection();
+  const { updateCollection, loading: updateCollectionLoading } = useUpdateCollection();
+  const { deleteCollection, loading: deleteCollectionLoading } = useDeleteCollection();
   
   // Toggle folder expansion
   const toggleFolder = (folderId) => {
@@ -72,11 +96,7 @@ const FolderNavigation = ({
   const renderError = (message) => (
     <div className="p-4 text-center">
       <div className="text-red-500 mb-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" x2="12" y1="8" y2="12"/>
-          <line x1="12" x2="12.01" y1="16" y2="16"/>
-        </svg>
+        <AlertCircle size={24} className="mx-auto mb-2" />
       </div>
       <p className="text-sm text-gray-600">{message || 'Error loading data'}</p>
       <button 
@@ -196,6 +216,56 @@ const FolderNavigation = ({
   const openDeleteConfirmation = () => {
     setShowDeleteConfirmation(true);
     closeContextMenu();
+  };
+  
+  // Handle collection operations
+  const handleCreateCollection = async (collectionData) => {
+    try {
+      await createCollection(collectionData);
+      refetchCollections();
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+    }
+  };
+  
+  const handleUpdateCollection = async (id, updates) => {
+    try {
+      await updateCollection(id, updates);
+      refetchCollections();
+    } catch (error) {
+      console.error('Failed to update collection:', error);
+    }
+  };
+  
+  const handleDeleteCollection = async (id) => {
+    try {
+      await deleteCollection(id, { deleteChildren: true });
+      refetchCollections();
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
+    }
+  };
+  
+  // Handle tag filtering
+  const handleTagsChange = (tags) => {
+    setSelectedTags(tags);
+    if (onTagFilter) {
+      onTagFilter(tags);
+    }
+  };
+  
+  // Create smart collection from selected tags
+  const handleCreateSmartCollection = (collectionData) => {
+    if (selectedTags.length === 0) return;
+    
+    const smartCollectionData = {
+      ...collectionData,
+      smartCollection: true,
+      tagFilters: selectedTags
+    };
+    
+    handleCreateCollection(smartCollectionData);
+    setShowCreateSmartCollection(false);
   };
   
   // Drag and drop handlers
@@ -433,41 +503,72 @@ const FolderNavigation = ({
         {/* Collections tab */}
         {sidebarTab === 'collections' && (
           <div className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collections</h3>
-              <button className="text-xs text-gray-500 hover:text-gray-700">
-                <Plus size={14} />
-              </button>
-            </div>
-            
             {collectionsLoading ? (
               renderLoading()
             ) : collectionsError ? (
               renderError(collectionsError.message)
             ) : (
-              <div className="space-y-1">
-                {(collections?.items || []).map(collection => (
-                  <button
-                    key={collection.id}
-                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                      currentView === 'collection' && currentCollection === collection.id 
-                        ? 'bg-blue-50 text-blue-600' 
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => onCollectionClick(collection.id)}
-                  >
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: collection.color }}></div>
-                    <span className="truncate">{collection.name}</span>
-                    <span className="text-xs text-gray-500 ml-auto">{collection.items.length}</span>
-                  </button>
-                ))}
-              </div>
+              <CollectionNavigation
+                collections={collections?.items || []}
+                currentCollection={currentCollection}
+                onCollectionClick={onCollectionClick}
+                onCreateCollection={handleCreateCollection}
+                onUpdateCollection={handleUpdateCollection}
+                onDeleteCollection={handleDeleteCollection}
+              />
             )}
             
-            <button className="mt-3 w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center space-x-2">
-              <Plus size={14} />
-              <span>New Collection</span>
-            </button>
+            {selectedTags.length > 0 && (
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
+                    <Filter size={12} className="mr-1" /> 
+                    Filtered by Tags
+                  </h4>
+                  <button
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                    onClick={() => setShowCreateSmartCollection(true)}
+                    title="Save as Smart Collection"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+                
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {selectedTags.map(tag => {
+                    const tagData = tags?.find(t => t.name === tag);
+                    const tagColor = tagData?.color || '#3B82F6';
+                    
+                    return (
+                      <div 
+                        key={tag}
+                        className="px-2 py-1 text-xs rounded-full flex items-center"
+                        style={{ 
+                          backgroundColor: `${tagColor}20`, 
+                          color: tagColor
+                        }}
+                      >
+                        <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tagColor }}></span>
+                        <span>{tag}</span>
+                        <button 
+                          onClick={() => handleTagsChange(selectedTags.filter(t => t !== tag))}
+                          className="ml-1 p-0.5 rounded-full hover:bg-gray-200"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  className="w-full text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => handleTagsChange([])}
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )}
           </div>
         )}
         
@@ -476,9 +577,22 @@ const FolderNavigation = ({
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tags</h3>
-              <button className="text-xs text-gray-500 hover:text-gray-700">
+              <button
+                className="text-xs text-gray-500 hover:text-gray-700"
+                onClick={() => setShowTagManager(true)}
+              >
                 <Plus size={14} />
               </button>
+            </div>
+            
+            {/* Tag selection */}
+            <div className="mb-4">
+              <TagSelector
+                selectedTags={selectedTags}
+                onTagsChange={handleTagsChange}
+                multiSelect={true}
+                placeholder="Filter by tags..."
+              />
             </div>
             
             {tagsLoading ? (
@@ -486,23 +600,90 @@ const FolderNavigation = ({
             ) : tagsError ? (
               renderError(tagsError.message)
             ) : (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(tags || []).map(tag => (
-                  <button 
-                    key={tag.id}
-                    className="px-2 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200 flex items-center"
-                    onClick={() => {/* Handle tag filter */}}
-                    style={{ backgroundColor: `${tag.color}20` }}
-                  >
-                    <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }}></span>
-                    {tag.name}
-                  </button>
-                ))}
+              <div>
+                {/* Tag categories */}
+                {tagCategories && tagCategories.length > 0 && (
+                  <div className="mb-4">
+                    {tagCategories.map(category => {
+                      const categoryTags = tags?.filter(tag => tag.categoryId === category.id) || [];
+                      
+                      if (categoryTags.length === 0) return null;
+                      
+                      return (
+                        <div key={category.id} className="mb-3">
+                          <h4 className="text-xs font-medium text-gray-700 mb-1">{category.name}</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {categoryTags.map(tag => (
+                              <button 
+                                key={tag.id}
+                                className={`px-2 py-1 text-xs rounded-full flex items-center ${
+                                  selectedTags.includes(tag.name) ? 'ring-1 ring-gray-400' : ''
+                                }`}
+                                style={{ 
+                                  backgroundColor: `${tag.color}20`, 
+                                  color: tag.color
+                                }}
+                                onClick={() => {
+                                  if (selectedTags.includes(tag.name)) {
+                                    handleTagsChange(selectedTags.filter(t => t !== tag.name));
+                                  } else {
+                                    handleTagsChange([...selectedTags, tag.name]);
+                                  }
+                                }}
+                              >
+                                <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }}></span>
+                                {tag.name}
+                                <span className="ml-1 text-xs opacity-70">({tag.count})</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* Uncategorized tags */}
+                <div className="mb-2">
+                  <h4 className="text-xs font-medium text-gray-700 mb-1">Other Tags</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {(tags || [])
+                      .filter(tag => !tag.categoryId)
+                      .map(tag => (
+                        <button 
+                          key={tag.id}
+                          className={`px-2 py-1 text-xs rounded-full flex items-center ${
+                            selectedTags.includes(tag.name) ? 'ring-1 ring-gray-400' : ''
+                          }`}
+                          style={{ 
+                            backgroundColor: `${tag.color}20`, 
+                            color: tag.color
+                          }}
+                          onClick={() => {
+                            if (selectedTags.includes(tag.name)) {
+                              handleTagsChange(selectedTags.filter(t => t !== tag.name));
+                            } else {
+                              handleTagsChange([...selectedTags, tag.name]);
+                            }
+                          }}
+                        >
+                          <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }}></span>
+                          {tag.name}
+                          <span className="ml-1 text-xs opacity-70">({tag.count})</span>
+                        </button>
+                      ))
+                    }
+                  </div>
+                </div>
               </div>
             )}
             
-            <button className="mt-3 text-sm text-blue-600 hover:underline">
-              Manage Tags
+            <button 
+              className="mt-4 w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center"
+              onClick={() => setShowTagManager(true)}
+            >
+              <Tag size={14} className="mr-1" />
+              <span>Manage Tags</span>
             </button>
           </div>
         )}
@@ -556,6 +737,29 @@ const FolderNavigation = ({
         onRename={openRenameFolderModal}
         onDelete={openDeleteConfirmation}
         onCreateSubfolder={() => openNewFolderModal(contextMenu.folderId)}
+      />
+      
+      {/* Tag Manager modal */}
+      <TagManager 
+        isOpen={showTagManager}
+        onClose={() => setShowTagManager(false)}
+        onTagsChange={() => {
+          refetchTags();
+        }}
+      />
+      
+      {/* Smart Collection Modal */}
+      <CollectionModal
+        isOpen={showCreateSmartCollection}
+        onClose={() => setShowCreateSmartCollection(false)}
+        title="Create Smart Collection"
+        initialValues={{ 
+          name: `Collection: ${selectedTags.join(', ')}`,
+          description: `Automatically filters by tags: ${selectedTags.join(', ')}`
+        }}
+        onSubmit={handleCreateSmartCollection}
+        collections={collections?.items || []}
+        submitButtonText="Create"
       />
     </div>
   );
@@ -611,15 +815,7 @@ const FolderItem = ({
               onToggle(folder.id);
             }}
           >
-            {isExpanded ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down">
-                <path d="m6 9 6 6 6-6"/>
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right">
-                <path d="m9 6 6 6-6 6"/>
-              </svg>
-            )}
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
         ) : (
           <div className="w-5"></div>

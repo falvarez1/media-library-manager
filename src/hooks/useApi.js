@@ -172,9 +172,330 @@ export const useCollectionContents = (id, options = {}, deps = []) => {
   );
 };
 
+export const useCollection = (id, deps = []) => {
+  return useApi(
+    useCallback(() => api.collections.getCollectionById(id), [id]),
+    [id, ...deps]
+  );
+};
+
+export const useChildCollections = (id, options = {}, deps = []) => {
+  return useApi(
+    useCallback(() => api.collections.getChildCollections(id, options), [id, options]),
+    [id, ...deps]
+  );
+};
+
+export const useCreateCollection = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const createCollection = async (collectionData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.collections.createCollection(collectionData);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { createCollection, loading, error, success };
+};
+
+export const useUpdateCollection = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const updateCollection = async (id, updates) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.collections.updateCollection(id, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { updateCollection, loading, error, success };
+};
+
+export const useDeleteCollection = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const deleteCollection = async (id, options = {}) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.collections.deleteCollection(id, options);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { deleteCollection, loading, error, success };
+};
+
+export const useAddItemsToCollection = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const addItems = async (collectionId, itemIds) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.collections.addItemsToCollection(collectionId, itemIds);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { addItems, loading, error, success };
+};
+
+export const useRemoveItemsFromCollection = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const removeItems = async (collectionId, itemIds) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.collections.removeItemsFromCollection(collectionId, itemIds);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { removeItems, loading, error, success };
+};
+
 // Common API hooks for tags
 export const useTags = (options = {}, deps = []) => {
   return useApi(api.tags.getTags, deps, [], options);
+};
+
+export const useTagById = (id, deps = []) => {
+  return useApi(
+    useCallback(() => api.tags.getTagById(id), [id]),
+    [id, ...deps]
+  );
+};
+
+export const useTagCategories = (deps = []) => {
+  return useApi(api.tags.getTagCategories, deps, []);
+};
+
+export const useCreateTag = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const createTag = async (tagData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.createTag(tagData);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { createTag, loading, error, success };
+};
+
+export const useUpdateTag = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const updateTag = async (id, updates) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.updateTag(id, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { updateTag, loading, error, success };
+};
+
+export const useDeleteTag = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const deleteTag = async (id) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.deleteTag(id);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { deleteTag, loading, error, success };
+};
+
+export const useCreateTagCategory = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const createCategory = async (categoryData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.createTagCategory(categoryData);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { createCategory, loading, error, success };
+};
+
+export const useUpdateTagCategory = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const updateCategory = async (id, updates) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.updateTagCategory(id, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { updateCategory, loading, error, success };
+};
+
+export const useBatchUpdateTags = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const batchUpdate = async (mediaIds, updates) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.tags.batchUpdateTags(mediaIds, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { batchUpdate, loading, error, success };
+};
+
+export const usePopularTags = (options = {}, deps = []) => {
+  return useApi(api.tags.getPopularTags, deps, [], options);
+};
+
+export const useTagSuggestions = (query, options = {}, deps = []) => {
+  const mergedOptions = { ...options, query };
+  return useApi(
+    api.tags.getTagSuggestions,
+    [query, ...deps],
+    [],
+    mergedOptions
+  );
+};
+
+export const useMediaWithTag = (tagId, options = {}, deps = []) => {
+  return useApi(
+    useCallback(() => api.tags.getMediaWithTag(tagId, options), [tagId, options]),
+    [tagId, ...deps]
+  );
 };
 
 // Common API hooks for users

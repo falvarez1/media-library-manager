@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader } from 'lucide-react';
-import { useMediaItem, useTags } from '../hooks/useApi';
+import { useState, useEffect } from 'react';
+import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag } from 'lucide-react';
+import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags } from '../hooks/useApi';
+import TagSelector from './TagSelector';
+import CollectionModal from './CollectionModal';
 
 const DetailsSidebar = ({ 
   mediaId, 
@@ -10,13 +12,49 @@ const DetailsSidebar = ({
   onToggleFavorite
 }) => {
   // Fetch media item by ID using our hook
-  const { data: item, loading: itemLoading, error: itemError } = useMediaItem(mediaId);
+  const { data: item, loading: itemLoading, error: itemError, refetch: refetchMediaItem } = useMediaItem(mediaId);
   
   // Fetch all tags data
   const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
+  // Fetch all collections data
+  const { data: collections, loading: collectionsLoading, error: collectionsError } = useCollections();
+  
   // Details tab state
   const [detailsTab, setDetailsTab] = useState('info'); // 'info', 'metadata', 'usage', 'comments'
+  
+  // Tag editing state
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]);
+  
+  // Collection state
+  const [showCollectionSelector, setShowCollectionSelector] = useState(false);
+  const [mediaCollections, setMediaCollections] = useState([]);
+  
+  // Batch update tags hook
+  const { batchUpdate: updateTags, loading: updateTagsLoading } = useBatchUpdateTags();
+  
+  // Collection operations hooks
+  const { addItems, loading: addToCollectionLoading } = useAddItemsToCollection();
+  const { removeItems, loading: removeFromCollectionLoading } = useRemoveItemsFromCollection();
+  
+  // Initialize tags when item loads
+  useEffect(() => {
+    if (item && item.tags) {
+      setSelectedTags(item.tags);
+    }
+  }, [item]);
+  
+  // Initialize collections when item and collections load
+  useEffect(() => {
+    if (item && collections) {
+      // Find collections that contain this item
+      const itemCollections = collections.items.filter(collection => 
+        collection.items.includes(mediaId)
+      );
+      setMediaCollections(itemCollections);
+    }
+  }, [item, collections, mediaId]);
   
   // Get status color based on status
   const getStatusColor = (status) => {
@@ -37,6 +75,63 @@ const DetailsSidebar = ({
   // Handle favorite toggle
   const handleToggleFavorite = () => {
     if (onToggleFavorite) onToggleFavorite(mediaId);
+  };
+  
+  // Handle tag updates
+  const handleTagsChange = async (tags) => {
+    setSelectedTags(tags);
+    
+    if (!isEditingTags) return;
+    
+    try {
+      // Calculate tags to add and remove
+      const currentTags = item.tags || [];
+      const tagsToAdd = tags.filter(tag => !currentTags.includes(tag));
+      const tagsToRemove = currentTags.filter(tag => !tags.includes(tag));
+      
+      if (tagsToAdd.length === 0 && tagsToRemove.length === 0) return;
+      
+      // Update tags via API
+      await updateTags([mediaId], { 
+        addTags: tagsToAdd, 
+        removeTags: tagsToRemove 
+      });
+      
+      // Refresh media item to get updated data
+      refetchMediaItem();
+      
+    } catch (error) {
+      console.error('Failed to update tags:', error);
+    }
+  };
+  
+  // Handle adding to collection
+  const handleAddToCollection = async (collectionId) => {
+    try {
+      await addItems(collectionId, [mediaId]);
+      
+      // Update local state
+      if (collections) {
+        const collection = collections.items.find(c => c.id === collectionId);
+        if (collection && !mediaCollections.includes(collection)) {
+          setMediaCollections([...mediaCollections, collection]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add to collection:', error);
+    }
+  };
+  
+  // Handle removing from collection
+  const handleRemoveFromCollection = async (collectionId) => {
+    try {
+      await removeItems(collectionId, [mediaId]);
+      
+      // Update local state
+      setMediaCollections(mediaCollections.filter(c => c.id !== collectionId));
+    } catch (error) {
+      console.error('Failed to remove from collection:', error);
+    }
   };
   
   // Loading state
@@ -254,35 +349,104 @@ const DetailsSidebar = ({
                 </div>
               )}
               
+              {/* Collections */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-sm font-medium flex items-center">
+                    <Folder size={14} className="mr-1.5 text-gray-400" />
+                    Collections
+                  </h4>
+                  <button 
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={() => setShowCollectionSelector(true)}
+                  >
+                    Add to Collection
+                  </button>
+                </div>
+                
+                {mediaCollections.length > 0 ? (
+                  <div className="space-y-1">
+                    {mediaCollections.map(collection => (
+                      <div 
+                        key={collection.id} 
+                        className="flex justify-between items-center p-2 bg-gray-50 rounded-md group"
+                      >
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: collection.color }}
+                          ></div>
+                          <span className="text-sm">{collection.name}</span>
+                        </div>
+                        <button 
+                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                          onClick={() => handleRemoveFromCollection(collection.id)}
+                          title="Remove from collection"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 p-2 bg-gray-50 rounded-md text-center">
+                    Not in any collections
+                  </div>
+                )}
+              </div>
+              
               {/* Tags */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <h4 className="text-sm font-medium">Tags</h4>
-                  <button className="text-xs text-blue-600 hover:text-blue-800">
-                    Edit Tags
+                  <h4 className="text-sm font-medium flex items-center">
+                    <Tag size={14} className="mr-1.5 text-gray-400" />
+                    Tags
+                  </h4>
+                  <button 
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={() => {
+                      setIsEditingTags(!isEditingTags);
+                      if (!isEditingTags) {
+                        setSelectedTags(item.tags || []);
+                      }
+                    }}
+                  >
+                    {isEditingTags ? 'Done' : 'Edit Tags'}
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {item.tags && item.tags.map((tagName, index) => {
-                    const tag = tags ? tags.find(t => t.name === tagName) : null;
-                    return (
-                      <div 
-                        key={index} 
-                        className="px-2 py-1 text-xs rounded-full flex items-center"
-                        style={{ 
-                          backgroundColor: tag ? `${tag.color}20` : '#e5e7eb',
-                          color: tag ? tag.color : '#374151'
-                        }}
-                      >
-                        <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag ? tag.color : '#374151' }}></span>
-                        {tagName}
-                      </div>
-                    );
-                  })}
-                  <button className="px-2 py-1 text-xs rounded-full border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50">
-                    + Add
-                  </button>
-                </div>
+                
+                {isEditingTags ? (
+                  <div className="mb-2">
+                    <TagSelector
+                      selectedTags={selectedTags}
+                      onTagsChange={handleTagsChange}
+                      autoFocus={true}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {item.tags && item.tags.length > 0 ? (
+                      item.tags.map((tagName, index) => {
+                        const tag = tags ? tags.find(t => t.name === tagName) : null;
+                        return (
+                          <div 
+                            key={index} 
+                            className="px-2 py-1 text-xs rounded-full flex items-center"
+                            style={{ 
+                              backgroundColor: tag ? `${tag.color}20` : '#e5e7eb',
+                              color: tag ? tag.color : '#374151'
+                            }}
+                          >
+                            <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag ? tag.color : '#374151' }}></span>
+                            {tagName}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-sm text-gray-500">No tags</div>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* AI Tags */}
@@ -428,7 +592,7 @@ const DetailsSidebar = ({
                   
                   <div className="p-4 bg-gray-50 rounded-lg text-center">
                     <p className="text-sm text-gray-600 mb-3">This asset is not currently used in any content.</p>
-                    <button className="px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600">
+                    <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600">
                       Add to Content
                     </button>
                   </div>
@@ -528,6 +692,77 @@ const DetailsSidebar = ({
           )}
         </div>
       </div>
+      
+      {/* Collection Selector Modal */}
+      {showCollectionSelector && collections && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Add to Collection</h3>
+              <button 
+                onClick={() => setShowCollectionSelector(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="max-h-80 overflow-y-auto">
+              {collections.items.length > 0 ? (
+                <div className="space-y-2">
+                  {collections.items.map(collection => {
+                    const isInCollection = mediaCollections.some(c => c.id === collection.id);
+                    
+                    return (
+                      <div 
+                        key={collection.id}
+                        className="flex items-center justify-between p-2 border border-gray-200 rounded-md hover:bg-gray-50"
+                      >
+                        <div className="flex items-center">
+                          <div 
+                            className="w-4 h-4 rounded-full mr-2"
+                            style={{ backgroundColor: collection.color }}
+                          ></div>
+                          <span>{collection.name}</span>
+                        </div>
+                        <button
+                          className={`px-2 py-1 text-xs rounded-md ${
+                            isInCollection 
+                              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                          onClick={() => {
+                            if (isInCollection) {
+                              handleRemoveFromCollection(collection.id);
+                            } else {
+                              handleAddToCollection(collection.id);
+                            }
+                          }}
+                        >
+                          {isInCollection ? 'Remove' : 'Add'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No collections found</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowCollectionSelector(false)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

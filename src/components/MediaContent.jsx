@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, Tag, Plus, AlertCircle } from 'lucide-react';
 import MediaItem from './MediaItem';
-import { useMedia, useFolders, useCollections } from '../hooks/useApi';
+import { useMedia, useFolders, useCollections, useAddItemsToCollection } from '../hooks/useApi';
+import TagSelector from './TagSelector';
 
 const MediaContent = ({
   currentView,
@@ -14,7 +15,12 @@ const MediaContent = ({
   onSelect,
   onQuickView,
   onOpenEditor,
-  onFolderClick
+  onFolderClick,
+  onCollectionClick,
+  collections = [],
+  tags = [],
+  onUpdateCollection,
+  onAddToCollection
 }) => {
   // UI state
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -22,6 +28,49 @@ const MediaContent = ({
   const [mediaSelectionMode, setMediaSelectionMode] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [hoveredCollection, setHoveredCollection] = useState(null);
+  const [showCollectionBar, setShowCollectionBar] = useState(false);
+  const [collectionsToShow, setCollectionsToShow] = useState([]);
+  
+  // Adding to collection hook
+  const { addItems, loading: addingToCollection } = useAddItemsToCollection();
+  
+  // Collection bar timer
+  const collectionBarTimer = useRef(null);
+  
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (collectionBarTimer.current) {
+        clearTimeout(collectionBarTimer.current);
+      }
+    };
+  }, []);
+  
+  // When selected media changes, check if we should show collection bar
+  useEffect(() => {
+    if (selectedMedia.length > 0) {
+      setShowCollectionBar(true);
+      
+      // Set a timer to hide the collection bar after 5 seconds of inactivity
+      if (collectionBarTimer.current) {
+        clearTimeout(collectionBarTimer.current);
+      }
+      
+      collectionBarTimer.current = setTimeout(() => {
+        setShowCollectionBar(false);
+      }, 5000);
+    } else {
+      setShowCollectionBar(false);
+    }
+  }, [selectedMedia]);
+  
+  // Filter collections to show (root collections for easy access)
+  useEffect(() => {
+    const rootCollections = collections.filter(c => !c.parentId);
+    setCollectionsToShow(rootCollections);
+  }, [collections]);
   
   // Prepare API options based on view type and filters
   const getApiOptions = () => {
@@ -109,20 +158,25 @@ const MediaContent = ({
     : [];
 
   // Fetch collection data if needed
-  const { data: collectionsData, loading: collectionsLoading, error: collectionsError } =
-    useCollections({}, [currentCollection, currentView]);
-
-  // Get the current collection if relevant
-  const currentCollectionData = currentView === 'collection' && currentCollection 
-    ? (collectionsData?.items || []).find(c => c.id === currentCollection) 
+  const { data: collectionData, loading: collectionLoading, error: collectionError } =
+    useCollections({ id: currentCollection }, [currentCollection, currentView]);
+  
+  // For collection view, get the current collection
+  const currentCollectionData = currentView === 'collection' && currentCollection && collections.length > 0
+    ? collections.find(c => c.id === currentCollection) 
     : null;
+  
+  // Get child collections if in collection view
+  const childCollections = currentView === 'collection' && currentCollection && collections.length > 0
+    ? collections.filter(c => c.parentId === currentCollection)
+    : [];
 
   // Loading all data
-  const isLoading = mediaLoading || foldersLoading || collectionsLoading;
+  const isLoading = mediaLoading || foldersLoading || collectionLoading;
   
   // Has error
-  const hasError = mediaError || foldersError || collectionsError;
-  const errorMessage = mediaError?.message || foldersError?.message || collectionsError?.message;
+  const hasError = mediaError || foldersError || collectionError;
+  const errorMessage = mediaError?.message || foldersError?.message || collectionError?.message;
   
   // Calculate grid class based on size
   const getGridClass = () => {
@@ -202,6 +256,57 @@ const MediaContent = ({
     }
   };
   
+  // Drag and drop handlers
+  const handleDragStart = (mediaId) => {
+    setDraggedItem(mediaId);
+  };
+  
+  const handleDragOver = (e, collectionId) => {
+    e.preventDefault();
+    setHoveredCollection(collectionId);
+  };
+  
+  const handleDragLeave = () => {
+    setHoveredCollection(null);
+  };
+  
+  const handleDrop = async (e, collectionId) => {
+    e.preventDefault();
+    setHoveredCollection(null);
+    
+    if (!draggedItem) return;
+    
+    // If dragged one item
+    if (typeof draggedItem === 'string') {
+      await addItems(collectionId, [draggedItem]);
+    } 
+    // If dragged multiple items (from selection)
+    else if (Array.isArray(draggedItem)) {
+      await addItems(collectionId, draggedItem);
+    }
+    
+    setDraggedItem(null);
+  };
+  
+  // Drag selected items
+  const handleDragSelectedItems = () => {
+    if (selectedMedia.length > 0) {
+      setDraggedItem(selectedMedia);
+    }
+  };
+  
+  // Add selected media to collection
+  const handleAddToCollection = async (collectionId) => {
+    if (selectedMedia.length === 0) return;
+    
+    try {
+      await addItems(collectionId, selectedMedia);
+      // Success notification could be added here
+    } catch (error) {
+      console.error('Failed to add items to collection:', error);
+    }
+  };
+  
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
@@ -250,6 +355,14 @@ const MediaContent = ({
                   <line x1="10" x2="10" y1="11" y2="17"/>
                   <line x1="14" x2="14" y1="11" y2="17"/>
                 </svg>
+              </button>
+              
+              <button 
+                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+                draggable="true"
+                onDragStart={handleDragSelectedItems}
+              >
+                <Folder size={18} />
               </button>
               
               <button 
@@ -337,6 +450,67 @@ const MediaContent = ({
         </div>
       </div>
       
+      {/* Collection quick add bar - only shown when items are selected */}
+      {showCollectionBar && collectionsToShow.length > 0 && (
+        <div 
+          className="bg-gray-50 border-b border-gray-200 px-4 py-2"
+          onMouseEnter={() => {
+            if (collectionBarTimer.current) {
+              clearTimeout(collectionBarTimer.current);
+            }
+          }}
+          onMouseLeave={() => {
+            collectionBarTimer.current = setTimeout(() => {
+              setShowCollectionBar(false);
+            }, 2000);
+          }}
+        >
+          <div className="flex items-center">
+            <div className="text-sm text-gray-600 mr-3">Add to collection:</div>
+            <div className="flex space-x-2 overflow-x-auto py-1 pr-2 max-w-4xl">
+              {collectionsToShow.map(collection => (
+                <button
+                  key={collection.id}
+                  className={`px-3 py-1.5 text-sm rounded-md flex items-center whitespace-nowrap ${
+                    hoveredCollection === collection.id 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                  onClick={() => handleAddToCollection(collection.id)}
+                  onDragOver={(e) => handleDragOver(e, collection.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, collection.id)}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: collection.color }}
+                  ></div>
+                  <span>{collection.name}</span>
+                  {collection.items && (
+                    <span className="ml-1 text-xs text-gray-500">({collection.items.length})</span>
+                  )}
+                </button>
+              ))}
+              <button
+                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md flex items-center"
+                onClick={() => {
+                  // Open create collection modal with selected media
+                  if (onAddToCollection) {
+                    onAddToCollection({
+                      name: `New Collection (${selectedMedia.length} items)`,
+                      items: selectedMedia
+                    });
+                  }
+                }}
+              >
+                <Plus size={14} className="mr-1" />
+                New Collection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Media content */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* Loading state */}
@@ -351,11 +525,7 @@ const MediaContent = ({
         {hasError && !isLoading && (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="p-3 bg-red-100 text-red-500 rounded-full mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-triangle">
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-                <line x1="12" x2="12" y1="9" y2="13"></line>
-                <line x1="12" x2="12.01" y1="17" y2="17"></line>
-              </svg>
+              <AlertCircle size={32} />
             </div>
             <h3 className="text-lg font-medium text-gray-800 mb-2">Failed to load media</h3>
             <p className="text-gray-600 max-w-md mb-6">{errorMessage || 'An error occurred while loading media. Please try again.'}</p>
@@ -365,6 +535,43 @@ const MediaContent = ({
             >
               Retry
             </button>
+          </div>
+        )}
+        
+        {/* Collection view: child collections */}
+        {!isLoading && !hasError && currentView === 'collection' && childCollections.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              <Folder size={16} className="mr-1.5 text-blue-500" />
+              Sub-Collections
+            </h3>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3`}>
+              {childCollections.map(collection => (
+                <button
+                  key={collection.id}
+                  className={`flex flex-col items-center p-3 border rounded-lg hover:border-blue-200 transition-colors ${
+                    hoveredCollection === collection.id 
+                      ? 'border-blue-300 bg-blue-50' 
+                      : 'border-gray-200 hover:bg-blue-50'
+                  }`}
+                  onClick={() => onCollectionClick(collection.id)}
+                  onDragOver={(e) => handleDragOver(e, collection.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, collection.id)}
+                >
+                  <div className="w-full flex items-center justify-center">
+                    <div 
+                      className="w-12 h-12 rounded-full mb-2 flex items-center justify-center"
+                      style={{ backgroundColor: `${collection.color}20` }}
+                    >
+                      <Folder size={24} style={{ color: collection.color }} />
+                    </div>
+                  </div>
+                  <span className="text-sm truncate w-full text-center font-medium">{collection.name}</span>
+                  <span className="text-xs text-gray-500">{collection.items?.length || 0} items</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -408,6 +615,9 @@ const MediaContent = ({
                       selectionMode={mediaSelectionMode}
                       onClick={(e) => handleMediaClick(item.id, e)}
                       onQuickView={() => onQuickView(item.id)}
+                      draggable={true}
+                      onDragStart={() => handleDragStart(item.id)}
+                      tags={tags}
                     />
                   ))}
                 </div>
@@ -418,6 +628,8 @@ const MediaContent = ({
                   selectionMode={mediaSelectionMode}
                   onMediaClick={handleMediaClick}
                   onQuickView={onQuickView}
+                  onDragStart={handleDragStart}
+                  tags={tags}
                 />
               )}
             </>
@@ -437,7 +649,15 @@ const MediaContent = ({
 };
 
 // List view component
-const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQuickView }) => {
+const MediaListView = ({ 
+  items, 
+  selectedMedia, 
+  selectionMode, 
+  onMediaClick, 
+  onQuickView,
+  onDragStart,
+  tags = []
+}) => {
   // Get status color
   const getStatusColor = (status) => {
     switch(status) {
@@ -465,6 +685,38 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
     }
   };
   
+  // Display tags
+  const renderItemTags = (itemTags) => {
+    if (!itemTags || itemTags.length === 0) return null;
+    
+    // Display at most 2 tags in list view
+    const tagsToShow = itemTags.slice(0, 2);
+    const remaining = itemTags.length - tagsToShow.length;
+    
+    return (
+      <div className="flex items-center space-x-1 ml-2">
+        {tagsToShow.map((tagName, index) => {
+          const tag = tags.find(t => t.name === tagName);
+          return (
+            <div 
+              key={index}
+              className="px-1.5 py-0.5 text-xs rounded-full"
+              style={{ 
+                backgroundColor: tag ? `${tag.color}20` : '#e5e7eb',
+                color: tag ? tag.color : '#374151'
+              }}
+            >
+              {tagName}
+            </div>
+          );
+        })}
+        {remaining > 0 && (
+          <div className="text-xs text-gray-500">+{remaining} more</div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <table className="min-w-full divide-y divide-gray-200">
       <thead className="bg-gray-50">
@@ -483,7 +735,7 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modified</th>
-          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
@@ -494,6 +746,8 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
             key={item.id}
             className={`hover:bg-gray-50 ${selectedMedia.includes(item.id) ? 'bg-blue-50' : ''}`}
             onClick={(e) => onMediaClick(item.id, e)}
+            draggable="true"
+            onDragStart={() => onDragStart(item.id)}
           >
             {selectionMode && (
               <td className="px-4 py-4 whitespace-nowrap">
@@ -543,20 +797,8 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
               {item.modified}
             </td>
-            <td className="px-4 py-4 whitespace-nowrap text-sm">
-              {item.used ? (
-                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 flex items-center w-fit">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-1">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                  Used
-                </span>
-              ) : (
-                <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 w-fit">
-                  Unused
-                </span>
-              )}
+            <td className="px-4 py-4 whitespace-nowrap">
+              {renderItemTags(item.tags)}
             </td>
             <td className="px-4 py-4 whitespace-nowrap text-sm">
               {item.status && (
