@@ -99,6 +99,28 @@ Media Library Manager is built using a modern web development stack:
   - Component-driven architecture with reusable UI elements
   - Client-side state management with React hooks
   - Responsive design principles for cross-device compatibility
+  - Comprehensive mock data system for development and testing
+
+### Mock System
+
+The application includes a robust mock data system that simulates backend API functionality. This allows for rapid development and testing without requiring a real backend.
+
+- **Mock Structure**:
+  - Located in `src/mocks/` directory
+  - Organized into `data/`, `api/`, and `utils/` subdirectories
+  - Includes realistic data with proper relationships between entities
+
+- **Features**:
+  - Simulates network conditions including delays and errors
+  - Provides CRUD operations for all data types
+  - Implements realistic pagination, filtering, and sorting
+  - Handles edge cases and error states
+  - Uses high-quality image placeholders from Unsplash
+
+- **Usage**:
+  - Import mock APIs directly: `import api from 'src/mocks/api'`
+  - Mock APIs match the interface of real API calls
+  - See `src/mocks/README.md` for detailed documentation
 
 ## API Documentation
 
