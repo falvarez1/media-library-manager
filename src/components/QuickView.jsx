@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, ArrowLeft, ArrowRight, Info, Edit, Download, Share, Star, Heart, Play, Loader } from 'lucide-react';
-import { useMediaItem } from '../hooks/useMockApi';
+import { useMediaItem } from '../hooks/useApi';
 
 const QuickView = ({
   mediaId,

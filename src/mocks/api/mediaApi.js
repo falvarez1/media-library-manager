@@ -41,7 +41,27 @@ export const getMedia = async (options = {}) => {
   // Filter by folder
   let filtered = [...mediaItems];
   if (folder && folder !== 'all') {
-    filtered = filtered.filter(item => item.folder === folder);
+    // Import folders data for folder filtering
+    const foldersData = await import('../data/folders');
+    const allFolders = foldersData.default;
+    
+    // Get all folders that are direct or indirect children of the selected folder
+    const folderIds = [folder];
+    
+    // Find all child folders using a recursive function
+    const findChildFolders = (parentId) => {
+      const childFolders = allFolders.filter(f => f.parent === parentId);
+      childFolders.forEach(childFolder => {
+        folderIds.push(childFolder.id);
+        findChildFolders(childFolder.id);
+      });
+    };
+    
+    // Get all descendant folders
+    findChildFolders(folder);
+    
+    // Filter media items by any folder in the tree
+    filtered = filtered.filter(item => folderIds.includes(item.folder));
   }
   
   // Filter by collection

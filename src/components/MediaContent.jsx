@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader } from 'lucide-react';
 import MediaItem from './MediaItem';
-import { useMedia, useFolders, useCollections } from '../hooks/useMockApi';
+import { useMedia, useFolders, useCollections } from '../hooks/useApi';
 
 const MediaContent = ({
   currentView,
@@ -34,7 +34,10 @@ const MediaContent = ({
     };
 
     if (currentView === 'folder') {
-      options.folder = currentFolder;
+      // Use 'all' for All Media view, otherwise pass the specific folder ID
+      if (currentFolder !== 'all') {
+        options.folder = currentFolder;
+      }
     } else if (currentView === 'collection') {
       options.collection = currentCollection;
     } else if (currentView === 'search') {
@@ -63,14 +66,23 @@ const MediaContent = ({
     sortOrder
   ]);
   
-  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(apiOptions, [apiOptions]);
+  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(apiOptions, [
+    currentView,
+    currentFolder,
+    currentCollection,
+    searchTerm,
+    sortBy,
+    sortOrder,
+    JSON.stringify(filters)
+  ]);
   
   // Get media items
   const mediaItems = mediaData?.items || [];
 
   // Fetch folders for the current folder
-  const { data: foldersData, loading: foldersLoading, error: foldersError } = 
-    useFolders({}, [currentFolder]);
+  const foldersOptions = { parent: currentFolder === 'all' ? null : currentFolder };
+  const { data: foldersData, loading: foldersLoading, error: foldersError } =
+    useFolders(foldersOptions, [currentFolder, JSON.stringify(foldersOptions)]);
 
   // Get child folders of the current folder
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all' 
@@ -78,8 +90,8 @@ const MediaContent = ({
     : [];
 
   // Fetch collection data if needed
-  const { data: collectionsData, loading: collectionsLoading, error: collectionsError } = 
-    useCollections({}, [currentCollection]);
+  const { data: collectionsData, loading: collectionsLoading, error: collectionsError } =
+    useCollections({}, [currentCollection, currentView]);
 
   // Get the current collection if relevant
   const currentCollectionData = currentView === 'collection' && currentCollection 

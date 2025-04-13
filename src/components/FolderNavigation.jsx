@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader } from 'lucide-react';
-import { useFolders, useCollections, useTags } from '../hooks/useMockApi';
+import { useFolders, useCollections, useTags } from '../hooks/useApi';
 
 const FolderNavigation = ({
   currentFolder,

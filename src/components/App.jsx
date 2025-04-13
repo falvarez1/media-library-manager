@@ -6,14 +6,14 @@ import DetailsSidebar from './DetailsSidebar';
 import MediaEditor from './MediaEditor';
 import QuickView from './QuickView';
 import FilterBar from './FilterBar';
-import { useMedia } from '../hooks/useMockApi';
+import { useMedia } from '../hooks/useApi';
 
 const App = () => {
   // Core state
   const [showSidebar, setShowSidebar] = useState(true);
   const [sidebarTab, setSidebarTab] = useState('files');
   const [currentView, setCurrentView] = useState('folder');
-  const [currentFolder, setCurrentFolder] = useState('1');
+  const [currentFolder, setCurrentFolder] = useState('all');
   const [currentCollection, setCurrentCollection] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');

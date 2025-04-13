@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader } from 'lucide-react';
-import { useMediaItem, useTags } from '../hooks/useMockApi';
+import { useMediaItem, useTags } from '../hooks/useApi';
 
 const DetailsSidebar = ({ 
   mediaId, 

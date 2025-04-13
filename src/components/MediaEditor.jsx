@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { 
-  X, 
-  Sliders, 
-  Crop, 
-  Layers, 
-  Edit, 
-  RefreshCw, 
-  Minus, 
-  Plus, 
-  RotateCcw, 
-  RotateCw, 
-  MoveHorizontal, 
-  MoveVertical, 
+import {
+  X,
+  Sliders,
+  Crop,
+  Layers,
+  Edit,
+  RefreshCw,
+  Minus,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  MoveHorizontal,
+  MoveVertical,
   Save,
   Loader
 } from 'lucide-react';
-import { useMediaItem } from '../hooks/useMockApi';
+import { useMediaItem } from '../hooks/useApi';
 
 const MediaEditor = ({ mediaId, onClose, onSave }) => {
   // Fetch the media item by ID using our hooks
