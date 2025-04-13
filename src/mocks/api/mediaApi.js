@@ -40,39 +40,51 @@ export const getMedia = async (options = {}) => {
   
   // Filter by folder
   let filtered = [...mediaItems];
+  
   if (folder && folder !== 'all') {
-    // Import folders data for folder filtering
-    const foldersData = await import('../data/folders');
-    const allFolders = foldersData.default;
-    
-    // Get all folders that are direct or indirect children of the selected folder
-    const folderIds = [folder];
-    
-    // Find all child folders using a recursive function
-    const findChildFolders = (parentId) => {
-      const childFolders = allFolders.filter(f => f.parent === parentId);
-      childFolders.forEach(childFolder => {
-        folderIds.push(childFolder.id);
-        findChildFolders(childFolder.id);
-      });
-    };
-    
-    // Get all descendant folders
-    findChildFolders(folder);
-    
-    // Filter media items by any folder in the tree
-    filtered = filtered.filter(item => folderIds.includes(item.folder));
+    try {
+      // Import folders to get the hierarchy
+      const foldersModule = await import('../data/folders');
+      const allFolders = foldersModule.default;
+      
+      // Get all folders that are direct or indirect children of the selected folder
+      const folderIds = [folder];
+      
+      // Helper function to find child folders
+      const findChildFolders = (parentId) => {
+        const childFolders = allFolders.filter(f => f.parent === parentId);
+        childFolders.forEach(child => {
+          folderIds.push(child.id);
+          findChildFolders(child.id);
+        });
+      };
+      
+      // Find all child folders
+      findChildFolders(folder);
+      
+      // Filter media by any folder in the hierarchy
+      filtered = filtered.filter(item => folderIds.includes(item.folder));
+    } catch (error) {
+      console.error('Error filtering by folder:', error);
+      // If there's an error, just filter by the exact folder ID
+      filtered = filtered.filter(item => item.folder === folder);
+    }
   }
   
   // Filter by collection
   if (collection) {
-    // In a real implementation, this would be a server-side join
-    // Here we're simulating it by filtering items that belong to the collection
-    const collectionItems = await import('../data/collections')
-      .then(module => module.default.find(c => c.id === collection))
-      .then(c => c ? c.items : []);
+    try {
+      // In a real implementation, this would be a server-side join
+      // Here we're simulating it by filtering items that belong to the collection
+      const collectionsModule = await import('../data/collections');
+      const allCollections = collectionsModule.default;
+      const targetCollection = allCollections.find(c => c.id === collection);
+      const collectionItems = targetCollection ? targetCollection.items : [];
       
-    filtered = filtered.filter(item => collectionItems.includes(item.id));
+      filtered = filtered.filter(item => collectionItems.includes(item.id));
+    } catch (error) {
+      console.error('Error filtering by collection:', error);
+    }
   }
   
   // Apply search filter

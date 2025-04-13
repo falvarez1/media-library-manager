@@ -247,7 +247,7 @@ const App = () => {
         )}
         
         {/* Main content */}
-        <MediaContent 
+        <MediaContent
           currentView={currentView}
           currentFolder={currentFolder}
           currentCollection={currentCollection}
@@ -258,6 +258,7 @@ const App = () => {
           onSelect={handleMediaSelect}
           onQuickView={handleQuickView}
           onOpenEditor={openEditor}
+          onFolderClick={handleFolderClick}
         />
         
         {/* Details sidebar */}

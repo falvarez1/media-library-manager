@@ -1,13 +1,12 @@
 /**
- * Custom hook for consuming APIs
+ * Custom hook for consuming the API services
  * 
- * This hook provides a consistent way to integrate with the service layer,
- * handling loading states, errors, and API responses from both mock and real APIs.
+ * This hook provides a consistent way to integrate the service layer with React components,
+ * handling loading states, errors, and API responses.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services';
-import config from '../services/config';
 
 /**
  * Generic hook for making API calls
@@ -105,19 +104,6 @@ export const useTags = (options = {}, deps = []) => {
 // Common API hooks for users
 export const useCurrentUser = (deps = []) => {
   return useApi(api.users.getCurrentUser, deps, null);
-};
-
-/**
- * Hook that exposes the current data source configuration
- * @returns {Object} - Current data source information
- */
-export const useDataSource = () => {
-  return {
-    isUsingRealApi: config.useRealApi,
-    apiBaseUrl: config.apiBaseUrl,
-    dataSource: config.useRealApi ? 'real' : 'mock',
-    config
-  };
 };
 
 export default useApi;

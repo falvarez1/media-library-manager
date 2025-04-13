@@ -75,9 +75,17 @@ const MediaContent = ({
     sortOrder,
     JSON.stringify(filters)
   ]);
-  
-  // Get media items
+  // Get media items with debug logging
   const mediaItems = mediaData?.items || [];
+  
+  // Debug logging
+  console.log('MediaContent Debug:', {
+    currentView,
+    currentFolder,
+    mediaItemsCount: mediaItems.length,
+    mediaLoading,
+    mediaError
+  });
 
   // Fetch folders for the current folder
   const foldersOptions = { parent: currentFolder === 'all' ? null : currentFolder };
@@ -350,7 +358,7 @@ const MediaContent = ({
         )}
 
         {/* Subfolders section - only shown when in folder view and not loading/error */}
-        {!isLoading && !hasError && currentView === 'folder' && childrenFolders.length > 0 && (
+        {!isLoading && !hasError && currentView === 'folder' && childrenFolders && childrenFolders.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2 flex items-center">
               <Folders size={16} className="mr-1.5 text-gray-400" />
@@ -361,7 +369,7 @@ const MediaContent = ({
                 <button
                   key={folder.id}
                   className="flex flex-col items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  onClick={() => {/* Handle folder click */}}
+                  onClick={() => onFolderClick ? onFolderClick(folder.id) : null}
                 >
                   <Folders size={32} style={{ color: folder.color }} className="mb-2" />
                   <span className="text-sm truncate w-full text-center">{folder.name}</span>
@@ -373,8 +381,9 @@ const MediaContent = ({
         
         {/* Media items - only shown when not loading/error */}
         {!isLoading && !hasError && (
-          mediaItems.length > 0 ? (
+          mediaItems && mediaItems.length > 0 ? (
             <>
+              {console.log('Rendering media items:', { currentFolder, itemsCount: mediaItems.length })}
               {viewMode === 'grid' ? (
                 <div className={`grid ${getGridClass()} gap-4`}>
                   {mediaItems.map(item => (
