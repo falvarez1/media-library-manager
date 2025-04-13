@@ -59,7 +59,22 @@ export const useApi = (apiFn, deps = [], initialData = null, initialParams = nul
 
 // Common API hooks for media
 export const useMedia = (options = {}, deps = []) => {
-  return useApi(api.media.getMedia, deps, { items: [], meta: {} }, options);
+  // Make sure we're passing the folder parameter correctly
+  const executeApi = async () => {
+    console.log("useMedia hook calling API with options:", options);
+    // Directly pass the folder parameter as first argument if it exists
+    if (options && options.folder) {
+      console.log("Using direct folder parameter:", options.folder);
+      const otherOptions = { ...options };
+      delete otherOptions.folder;
+      return await api.media.getMedia(options.folder, otherOptions);
+    } else {
+      // Otherwise use the standard options object
+      return await api.media.getMedia(options);
+    }
+  };
+  
+  return useApi(executeApi, deps, { items: [], meta: {} });
 };
 
 export const useMediaItem = (id, deps = []) => {
@@ -73,14 +88,15 @@ export const useMediaItem = (id, deps = []) => {
 export const useFolders = (options = {}, deps = []) => {
   // Log folder requests for debugging
   console.log('useFolders Hook: Requesting folders with options:', JSON.stringify(options));
+
+  // Get all folders at once to ensure we have complete hierarchy data
+  const fetchAllFolders = async () => {
+    const response = await api.folders.getFolders();
+    console.log(`useFolders Hook: Received ${response.data.length} folders`);
+    return response;
+  };
   
-  const result = useApi(api.folders.getFolders, deps, [], options);
-  
-  // Log results for debugging
-  if (result.data) {
-    console.log(`useFolders Hook: Received ${result.data.length} folders`,
-      result.data.map(f => `${f.id} (${f.name})`));
-  }
+  const result = useApi(fetchAllFolders, deps, []);
   
   return result;
 };

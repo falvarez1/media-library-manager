@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus, X, AlertCircle, Filter } from 'lucide-react';
+import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus, X, AlertCircle, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import FolderModal from './FolderModal';
 import FolderContextMenu from './FolderContextMenu';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -7,8 +7,9 @@ import CollectionNavigation from './CollectionNavigation';
 import TagManager from './TagManager';
 import TagSelector from './TagSelector';
 import CollectionModal from './CollectionModal';
-import { 
-  useFolders, useCollections, useTags, useTagCategories, 
+import mockFolders from '../mocks/data/folders';
+import {
+  useFolders, useCollections, useTags, useTagCategories,
   useCreateFolder, useUpdateFolder, useDeleteFolder,
   useCreateCollection, useUpdateCollection, useDeleteCollection,
   useCreateTag, useUpdateTag, useDeleteTag
@@ -29,6 +30,7 @@ const FolderNavigation = ({
   const [expandedFolders, setExpandedFolders] = useState(['1', '2', '3']); // Default expanded folders
   const [selectedTags, setSelectedTags] = useState([]);
   const [smartCollections, setSmartCollections] = useState([]);
+  const [folderData, setFolderData] = useState(mockFolders);
   
   // Folder management state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
@@ -54,8 +56,9 @@ const FolderNavigation = ({
   const [draggedFolder, setDraggedFolder] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  
   // Fetch data using hooks
+  // Load ALL folders without parent filtering to ensure we get the full hierarchy
+  // Fetch data using hooks - use full folders data for proper nesting
   const { data: folders, loading: foldersLoading, error: foldersError, refetch: refetchFolders } = useFolders();
   const { data: collections, loading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useCollections();
   const { data: tags, loading: tagsLoading, error: tagsError, refetch: refetchTags } = useTags();
@@ -476,39 +479,33 @@ const FolderNavigation = ({
               </div>
             </div>
             
-            {foldersLoading ? (
-              renderLoading()
-            ) : foldersError ? (
-              renderError(foldersError.message)
-            ) : (
-              <div className="space-y-0.5">
-                {/* Render root folders */}
-                {(folders || [])
-                  .filter(folder => folder.parent === null)
-                  .map(folder => (
-                    <FolderItem 
-                      key={folder.id}
-                      folder={folder}
-                      allFolders={folders || []}
-                      expandedFolders={expandedFolders}
-                      currentFolder={currentFolder}
-                      currentView={currentView}
-                      level={0}
-                      onToggle={toggleFolder}
-                      onClick={onFolderClick}
-                      handleContextMenu={handleContextMenu}
-                      handleDragStart={handleDragStart}
-                      handleDragOver={handleDragOver}
-                      handleDragLeave={handleDragLeave}
-                      handleDrop={handleDrop}
-                      draggedFolder={draggedFolder}
-                      dropTarget={dropTarget}
-                      isDragging={isDragging}
-                    />
-                  ))
-                }
-              </div>
-            )}
+            <div className="space-y-0.5">
+              {/* Render root folders directly from mock data */}
+              {mockFolders
+                .filter(folder => folder.parent === null)
+                .map(folder => (
+                  <FolderItem
+                    key={folder.id}
+                    folder={folder}
+                    allFolders={mockFolders}
+                    expandedFolders={expandedFolders}
+                    currentFolder={currentFolder}
+                    currentView={currentView}
+                    level={0}
+                    onToggle={toggleFolder}
+                    onClick={onFolderClick}
+                    handleContextMenu={handleContextMenu}
+                    handleDragStart={handleDragStart}
+                    handleDragOver={handleDragOver}
+                    handleDragLeave={handleDragLeave}
+                    handleDrop={handleDrop}
+                    draggedFolder={draggedFolder}
+                    dropTarget={dropTarget}
+                    isDragging={isDragging}
+                  />
+                ))
+              }
+            </div>
           </div>
         )}
         
@@ -796,8 +793,15 @@ const FolderItem = ({
   dropTarget,
   isDragging
 }) => {
-  const hasChildren = allFolders.some(f => f.parent === folder.id);
+  // Explicitly check for children by comparing parent IDs as strings for consistency
+  const hasChildren = mockFolders.some(f => f.parent === folder.id);
   const isExpanded = expandedFolders.includes(folder.id);
+  
+  // Get actual child folders for rendering
+  const childFolders = mockFolders.filter(f => f.parent === folder.id);
+  
+  // For debugging
+  console.log("Folder:", folder.name, "ID:", folder.id, "Has children:", hasChildren, "Child count:", childFolders.length, "Expanded:", isExpanded);
   const isActive = currentView === 'folder' && currentFolder === folder.id;
   
   const isDropTarget = dropTarget === folder.id;
@@ -805,13 +809,12 @@ const FolderItem = ({
   
   return (
     <div>
-      <div 
+      <div
         className={`flex items-center px-2 py-1.5 rounded-md ${
-          isActive ? 'bg-blue-50 text-blue-600' : 
-          isDropTarget ? 'bg-blue-100' : 
+          isActive ? 'bg-blue-50 text-blue-600' :
+          isDropTarget ? 'bg-blue-100' :
           'hover:bg-gray-100'
         } ${isDragged ? 'opacity-50' : ''}`}
-        style={{ paddingLeft: `${(level * 12) + 8}px` }}
         onContextMenu={(e) => handleContextMenu(e, folder.id)}
         draggable="true"
         onDragStart={(e) => handleDragStart(e, folder)}
@@ -819,57 +822,56 @@ const FolderItem = ({
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, folder)}
       >
-        {hasChildren ? (
-          <button 
-            className="mr-1 text-gray-400 hover:text-gray-700"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle(folder.id);
+        <div className="flex items-center" style={{ marginLeft: `${level * 5}px` }}>
+          {hasChildren ? (
+            <button
+              className="mr-1 text-gray-400 hover:text-gray-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(folder.id);
+              }}
+            >
+              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+          ) : (
+            <div className="w-5"></div>
+          )}
+          <button
+            className="flex-1 flex items-center space-x-2 text-left truncate"
+            onClick={() => {
+              console.log(`FolderItem: Folder clicked: ${folder.id} (${folder.name})`);
+              onClick(folder.id);
             }}
           >
-            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <Folders size={16} style={{ color: folder.color }} />
+            <span className="truncate">{folder.name}</span>
           </button>
-        ) : (
-          <div className="w-5"></div>
-        )}
-        <button
-          className="flex-1 flex items-center space-x-2 text-left truncate"
-          onClick={() => {
-            console.log(`FolderItem: Folder clicked: ${folder.id} (${folder.name})`);
-            onClick(folder.id);
-          }}
-        >
-          <Folders size={16} style={{ color: folder.color }} />
-          <span className="truncate">{folder.name}</span>
-        </button>
+        </div>
       </div>
       
-      {isExpanded && hasChildren && (
-        <div>
-          {allFolders
-            .filter(f => f.parent === folder.id)
-            .map(childFolder => (
-              <FolderItem 
-                key={childFolder.id}
-                folder={childFolder}
-                allFolders={allFolders}
-                expandedFolders={expandedFolders}
-                currentFolder={currentFolder}
-                currentView={currentView}
-                level={level + 1}
-                onToggle={onToggle}
-                onClick={onClick}
-                handleContextMenu={handleContextMenu}
-                handleDragStart={handleDragStart}
-                handleDragOver={handleDragOver}
-                handleDragLeave={handleDragLeave}
-                handleDrop={handleDrop}
-                draggedFolder={draggedFolder}
-                dropTarget={dropTarget}
-                isDragging={isDragging}
-              />
-            ))
-          }
+      {isExpanded && childFolders.length > 0 && (
+        <div className={`${level === 1 ? 'ml-4' : 'ml-5'} pl-0 border-l border-gray-200 space-y-1 mt-1`}>
+          {childFolders.map(childFolder => (
+            <FolderItem
+              key={childFolder.id}
+              folder={childFolder}
+              allFolders={mockFolders}
+              expandedFolders={expandedFolders}
+              currentFolder={currentFolder}
+              currentView={currentView}
+              level={level + 1}
+              onToggle={onToggle}
+              onClick={onClick}
+              handleContextMenu={handleContextMenu}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDragLeave={handleDragLeave}
+              handleDrop={handleDrop}
+              draggedFolder={draggedFolder}
+              dropTarget={dropTarget}
+              isDragging={isDragging}
+            />
+          ))}
         </div>
       )}
     </div>

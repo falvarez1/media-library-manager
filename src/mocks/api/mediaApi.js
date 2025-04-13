@@ -16,16 +16,44 @@ let mediaItems = JSON.parse(JSON.stringify(media));
  * @param {Object} options - Query options
  * @returns {Promise} - Promise resolving to paginated media items
  */
-export const getMedia = async (options = {}) => {
+export const getMedia = async (folderArg = null, options = {}) => {
   await delay();
   simulateRandomFailure(0.03, 'Failed to fetch media items', 503, 'service_unavailable');
   
+  // Simplified folder parameter handling
+  let effectiveOptions = options;
+  let folderValue = null;
+  
+  // Log initial arguments
+  console.log('[mediaApi] getMedia called with direct folderArg:', folderArg);
+  console.log('[mediaApi] getMedia initial options:', options);
+  
+  // Case 1: First arg is direct folder ID (string/number)
+  if (folderArg !== null && (typeof folderArg === 'string' || typeof folderArg === 'number')) {
+    folderValue = folderArg.toString();
+    console.log('[mediaApi] Using direct folder ID argument:', folderValue);
+  }
+  // Case 2: First arg is options object
+  else if (folderArg !== null && typeof folderArg === 'object') {
+    effectiveOptions = folderArg;
+    folderValue = effectiveOptions.folder ?
+      (typeof effectiveOptions.folder === 'string' || typeof effectiveOptions.folder === 'number' ?
+        effectiveOptions.folder.toString() : null) : null;
+    console.log('[mediaApi] Using folder from options object:', folderValue);
+  }
+  // Case 3: Second arg (options) contains folder
+  else if (options && options.folder) {
+    folderValue = typeof options.folder === 'string' || typeof options.folder === 'number' ?
+      options.folder.toString() : null;
+    console.log('[mediaApi] Using folder from second arg options:', folderValue);
+  }
+  
+  // Extract all other options with defaults
   const {
     page = 1,
     pageSize = 20,
     sortBy = 'name',
     sortOrder = 'asc',
-    folder = null,
     collection = null,
     search = '',
     types = [],
@@ -36,17 +64,20 @@ export const getMedia = async (options = {}) => {
     dateTo = null,
     starred = null,
     favorited = null
-  } = options;
+  } = effectiveOptions;
+  
   // Filter by folder - Enhanced logging
   let filtered = [...mediaItems];
   
-  console.log(`[mediaApi] getMedia called with folder:`, folder, typeof folder);
+  console.log(`[mediaApi] Final folder value to use:`, folderValue);
   
-  // Ensure folder is treated as a string for filtering, handling null values
-  const folderValue = folder !== null && folder !== undefined ? folder.toString() : null;
-  console.log(`[mediaApi] Converted folder to string:`, folderValue);
+  // Debug to help diagnose the issue
+  if (folderValue === '') {
+    console.log('[mediaApi] WARNING: Empty folder string detected!');
+  }
   
-  if (folderValue !== null && folderValue !== 'all') {
+  if (folderValue !== null && folderValue !== undefined && folderValue !== '' && folderValue !== 'all') {
+    console.log(`[mediaApi] Filtering by folder: ${folderValue}`);
     try {
       // Import folders to get the hierarchy
       const foldersModule = await import('../data/folders');
@@ -76,10 +107,10 @@ export const getMedia = async (options = {}) => {
         });
       };
       
-      // Find all child folders
-      findChildFolders(folder);
+      // Find all child folders - use the string value consistently
+      findChildFolders(folderValue);
       
-      console.log(`[mediaApi] Filtering media for folder ${folder} and children:`, folderIds);
+      console.log(`[mediaApi] Filtering media for folder ${folderValue} and children:`, folderIds);
       
       // Debug output each media item's folder
       console.log(`[mediaApi] Media items before filtering:`,
@@ -90,7 +121,17 @@ export const getMedia = async (options = {}) => {
         // Convert item.folder to string for proper comparison, safely handling null
         const itemFolder = item.folder !== null && item.folder !== undefined ? item.folder.toString() : null;
         const isInFolder = itemFolder !== null && folderIds.includes(itemFolder);
-        console.log(`[mediaApi] Media item ${item.id} (${item.name}) in folder ${itemFolder}, match=${isInFolder}`);
+        
+        // More verbose logging to debug the issue
+        if (folderIds.length < 10) {  // Only log for reasonable number of folders
+          console.log(`[mediaApi] Media item ${item.id} (${item.name}) in folder ${itemFolder}, match=${isInFolder}`);
+          console.log(`[mediaApi] FolderIds includes check:`, {
+            itemFolder,
+            folderIds,
+            includes: folderIds.includes(itemFolder)
+          });
+        }
+        
         return isInFolder;
       });
       console.log(`[mediaApi] Found ${filtered.length} media items in folder(s)`, folderIds);

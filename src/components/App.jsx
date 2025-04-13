@@ -102,11 +102,21 @@ const App = () => {
   // Handle folder navigation
   const handleFolderClick = (folderId) => {
     console.log(`App: Folder clicked: ${folderId}`);
-    setCurrentFolder(folderId);
+    // Convert folder ID to string to ensure consistent type handling
+    setCurrentFolder(folderId.toString());
     setCurrentView('folder');
     setSelectedMedia([]);
     setShowDetails(false);
     setShowQuickView(false);
+    
+    // Reset any active search or filters if navigating to a specific folder
+    if (folderId !== 'all') {
+      // We keep any existing filters to allow filtering within folders
+      // But clear any search terms to show all content in the folder
+      if (searchTerm) {
+        setSearchTerm('');
+      }
+    }
   };
   
   // Folder operations

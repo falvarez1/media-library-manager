@@ -562,7 +562,7 @@ function FolderTreeItem({ folder, level }) {
       </div>
       
       {expanded && folder.children && folder.children.length > 0 && (
-        <div className="ml-6 pl-4 border-l border-gray-200 space-y-1 mt-1">
+        <div className="ml-2 pl-2 border-l border-gray-200 space-y-1 mt-1">
           {folder.children.map(child => (
             <FolderTreeItem 
               key={child.id} 

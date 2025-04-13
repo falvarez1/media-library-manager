@@ -149,18 +149,33 @@ const MediaContent = ({
     filters?.usage
   ]);
   
-  // Use a simpler dependency array
-  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(apiOptions, [
-    currentView,
-    currentFolder,
-    currentCollection,
-    searchTerm,
-    sortBy,
-    sortOrder,
-    JSON.stringify(filters),
-    // Explicitly include folder to trigger refetch, but as a string to ensure it's a stable reference
-    currentFolder // This should be the direct state variable, not apiOptions.folder
-  ]);
+  // Create a separate parameter for folder to ensure it's properly passed
+  const folderParam = currentFolder !== 'all' ? currentFolder : null;
+  
+  // Create a clean API options object without the folder parameter
+  const cleanApiOptions = { ...apiOptions };
+  delete cleanApiOptions.folder; // Remove folder from options object
+  
+  // Use direct parameters for the API call for clarity
+  console.log('Using folder parameter:', folderParam);
+  console.log('Using API options:', cleanApiOptions);
+  
+  // Call the API with separate folder parameter to avoid confusion
+  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(
+    {
+      ...cleanApiOptions,
+      folder: folderParam // Explicitly set as a direct property to avoid nested objects
+    },
+    [
+      currentView,
+      currentFolder,
+      currentCollection,
+      searchTerm,
+      sortBy,
+      sortOrder,
+      JSON.stringify(filters)
+    ]
+  );
   
   // Get media items with debug logging
   const mediaItems = mediaData?.items || [];
@@ -629,33 +644,26 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
           </div>
         )}
 
-        {/* Subfolders section - only shown when in folder view and not loading/error */}
-        {!isLoading && !hasError && currentView === 'folder' && childrenFolders && childrenFolders.length > 0 && (
+        {/* Subfolders section with recursive folder tree - only shown when in folder view and not loading/error */}
+        {!isLoading && !hasError && currentView === 'folder' && (childrenFolders && childrenFolders.length > 0) && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2 flex items-center">
               <Folders size={16} className="mr-1.5 text-gray-400" />
               Folders
             </h3>
-            <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3`}>
-              {childrenFolders.map(folder => (
-                <button
-                  key={folder.id}
-                  className="flex flex-col items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  onClick={() => {
-                    console.log("SubfolderClick: Navigating to folder:", folder.id, folder.name);
-                    if (onFolderClick) {
-                      onFolderClick(folder.id);
-                    }
-                  }}
-                  data-folder-id={folder.id}
-                >
-                  <Folders size={32} style={{ color: folder.color }} className="mb-2" />
-                  <span className="text-sm font-medium truncate w-full text-center">{folder.name}</span>
-                  <span className="text-xs text-gray-500 mt-1">
-                    {folder.path ? folder.path : folder.name}
-                  </span>
-                </button>
-              ))}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden p-4">
+              <div className="space-y-1">
+                {childrenFolders.map(folder => (
+                  <FolderTreeItem
+                    key={folder.id}
+                    folder={folder}
+                    level={0}
+                    currentFolder={currentFolder}
+                    allFolders={foldersData || []}
+                    onFolderClick={onFolderClick}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -672,19 +680,22 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
               })}
               {viewMode === 'grid' ? (
                 <div className={`grid ${getGridClass()} gap-4`}>
-                  {(currentFolder !== 'all' && folderContents?.contents?.items ? folderContents.contents.items : mediaItems).map(item => (
-                    <MediaItem
-                      key={item.id}
-                      item={item}
-                      isSelected={selectedMedia.includes(item.id)}
-                      selectionMode={mediaSelectionMode}
-                      onClick={(e) => handleMediaClick(item.id, e)}
-                      onQuickView={() => onQuickView(item.id)}
-                      draggable={true}
-                      onDragStart={() => handleDragStart(item.id)}
-                      tags={tags}
-                    />
-                  ))}
+                  {/* Display either folder contents for specific folder, or mediaItems for 'all' and other views */}
+                  {(mediaItems && mediaItems.length > 0) && (
+                    mediaItems.map(item => (
+                      <MediaItem
+                        key={item.id}
+                        item={item}
+                        isSelected={selectedMedia.includes(item.id)}
+                        selectionMode={mediaSelectionMode}
+                        onClick={(e) => handleMediaClick(item.id, e)}
+                        onQuickView={() => onQuickView(item.id)}
+                        draggable={true}
+                        onDragStart={() => handleDragStart(item.id)}
+                        tags={tags}
+                      />
+                    ))
+                  )}
                 </div>
               ) : (
                 <MediaListView
@@ -954,5 +965,73 @@ const X = ({ size }) => (
     <path d="m6 6 12 12"/>
   </svg>
 );
+
+// Recursive folder tree item component similar to mock-explorer
+const FolderTreeItem = ({ folder, level, currentFolder, allFolders, onFolderClick }) => {
+  const [expanded, setExpanded] = useState(level === 0);
+  const isActive = currentFolder === folder.id;
+  
+  // Get children folders
+  const children = allFolders.filter(f => f.parent === folder.id);
+  const hasChildren = children.length > 0;
+  
+  return (
+    <div className="select-none">
+      <div
+        className={`flex items-center hover:bg-gray-50 py-1.5 rounded px-1 cursor-pointer ${
+          isActive ? 'bg-blue-50 text-blue-600' : ''
+        }`}
+      >
+        <div className="w-6 text-gray-400" onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}>
+          {hasChildren && (
+            expanded ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )
+          )}
+        </div>
+        
+        <div className="w-5 h-5 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke={folder.color} strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        
+        <div className="flex-1" onClick={() => onFolderClick(folder.id)}>
+          <span className={`hover:text-blue-600 ${isActive ? 'font-medium text-blue-600' : ''}`}>
+            {folder.name}
+          </span>
+        </div>
+        
+        <div className="text-gray-400 text-xs">
+          {folder.path}
+        </div>
+      </div>
+      
+      {expanded && hasChildren && (
+        <div className="ml-6 pl-4 border-l border-gray-200 space-y-1 mt-1">
+          {children.map(child => (
+            <FolderTreeItem
+              key={child.id}
+              folder={child}
+              level={level + 1}
+              currentFolder={currentFolder}
+              allFolders={allFolders}
+              onFolderClick={onFolderClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default MediaContent;
