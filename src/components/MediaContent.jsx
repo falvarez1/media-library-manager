@@ -13,7 +13,8 @@ const MediaContent = ({
   selectedMedia = [],
   onSelect,
   onQuickView,
-  onOpenEditor
+  onOpenEditor,
+  onFolderClick
 }) => {
   // UI state
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -24,6 +25,8 @@ const MediaContent = ({
   
   // Prepare API options based on view type and filters
   const getApiOptions = () => {
+    console.log('Building API options with currentFolder:', currentFolder);
+    
     const options = {
       sortBy,
       sortOrder,
@@ -37,6 +40,9 @@ const MediaContent = ({
       // Use 'all' for All Media view, otherwise pass the specific folder ID
       if (currentFolder !== 'all') {
         options.folder = currentFolder;
+        console.log('Setting folder filter to:', currentFolder);
+      } else {
+        console.log('All folders view');
       }
     } else if (currentView === 'collection') {
       options.collection = currentCollection;
@@ -56,13 +62,17 @@ const MediaContent = ({
   };
 
   // Fetch media items based on current view
-  const apiOptions = useMemo(() => getApiOptions(), [
-    currentView, 
-    currentFolder, 
-    currentCollection, 
-    searchTerm, 
-    filters, 
-    sortBy, 
+  const apiOptions = useMemo(() => {
+    // Force re-evaluation when folder changes
+    console.log('Rebuilding apiOptions with folder:', currentFolder);
+    return getApiOptions();
+  }, [
+    currentView,
+    currentFolder,
+    currentCollection,
+    searchTerm,
+    filters,
+    sortBy,
     sortOrder
   ]);
   
@@ -73,7 +83,8 @@ const MediaContent = ({
     searchTerm,
     sortBy,
     sortOrder,
-    JSON.stringify(filters)
+    JSON.stringify(filters),
+    JSON.stringify(apiOptions)  // Include apiOptions to ensure re-fetch when folder changes
   ]);
   // Get media items with debug logging
   const mediaItems = mediaData?.items || [];
@@ -90,7 +101,7 @@ const MediaContent = ({
   // Fetch folders for the current folder
   const foldersOptions = { parent: currentFolder === 'all' ? null : currentFolder };
   const { data: foldersData, loading: foldersLoading, error: foldersError } =
-    useFolders(foldersOptions, [currentFolder, JSON.stringify(foldersOptions)]);
+    useFolders(foldersOptions, [currentFolder]);
 
   // Get child folders of the current folder
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all' 
@@ -369,7 +380,10 @@ const MediaContent = ({
                 <button
                   key={folder.id}
                   className="flex flex-col items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  onClick={() => onFolderClick ? onFolderClick(folder.id) : null}
+                  onClick={() => {
+                    console.log("Subfolder clicked:", folder.id);
+                    if (onFolderClick) onFolderClick(folder.id);
+                  }}
                 >
                   <Folders size={32} style={{ color: folder.color }} className="mb-2" />
                   <span className="text-sm truncate w-full text-center">{folder.name}</span>

@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader } from 'lucide-react';
-import { useFolders, useCollections, useTags } from '../hooks/useApi';
+import { useState, useRef, useEffect } from 'react';
+import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus } from 'lucide-react';
+import FolderModal from './FolderModal';
+import FolderContextMenu from './FolderContextMenu';
+import ConfirmationDialog from './ConfirmationDialog';
+import { useFolders, useCollections, useTags, useCreateFolder, useUpdateFolder, useDeleteFolder } from '../hooks/useApi';
 
 const FolderNavigation = ({
   currentFolder,
@@ -12,12 +15,37 @@ const FolderNavigation = ({
   onCollectionClick,
   onViewChange
 }) => {
+  // Core state
   const [expandedFolders, setExpandedFolders] = useState(['1', '2', '3']); // Default expanded folders
   
+  // Folder management state
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [selectedFolderForAction, setSelectedFolderForAction] = useState(null);
+  const [parentFolderForCreate, setParentFolderForCreate] = useState(null);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    position: { x: 0, y: 0 },
+    folderId: null
+  });
+
+  // Drag and drop state
+  const [draggedFolder, setDraggedFolder] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
   // Fetch data using hooks
-  const { data: folders, loading: foldersLoading, error: foldersError } = useFolders();
+  const { data: folders, loading: foldersLoading, error: foldersError, refetch: refetchFolders } = useFolders();
   const { data: collections, loading: collectionsLoading, error: collectionsError } = useCollections();
   const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
+  
+  // Folder operation hooks
+  const { createFolder, loading: createLoading } = useCreateFolder();
+  const { updateFolder, loading: updateLoading } = useUpdateFolder();
+  const { deleteFolder, loading: deleteLoading } = useDeleteFolder();
   
   // Toggle folder expansion
   const toggleFolder = (folderId) => {
@@ -59,6 +87,221 @@ const FolderNavigation = ({
       </button>
     </div>
   );
+  
+  // Handle context menu
+  const handleContextMenu = (e, folderId) => {
+    e.preventDefault();
+    
+    // Find folder
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+    
+    // Set context menu position and folder
+    setContextMenu({
+      visible: true,
+      position: { 
+        x: e.clientX, 
+        y: e.clientY 
+      },
+      folderId
+    });
+    
+    // Store folder for action
+    setSelectedFolderForAction(folder);
+  };
+  
+  // Close context menu
+  const closeContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      position: { x: 0, y: 0 },
+      folderId: null
+    });
+  };
+  
+  // Handle new folder creation
+  const handleCreateFolder = async (name) => {
+    try {
+      await createFolder({
+        name,
+        parent: parentFolderForCreate
+      });
+      
+      // Refresh folder list
+      refetchFolders();
+      
+      // Close modal and reset state
+      setShowNewFolderModal(false);
+      setParentFolderForCreate(null);
+      
+      // Auto expand parent folder if a subfolder was created
+      if (parentFolderForCreate && !expandedFolders.includes(parentFolderForCreate)) {
+        setExpandedFolders([...expandedFolders, parentFolderForCreate]);
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+    }
+  };
+  
+  // Open new folder modal
+  const openNewFolderModal = (parentId = null) => {
+    setParentFolderForCreate(parentId);
+    setShowNewFolderModal(true);
+    closeContextMenu();
+  };
+  
+  // Handle folder rename
+  const handleRenameFolder = async (newName) => {
+    if (!selectedFolderForAction) return;
+    
+    try {
+      await updateFolder(selectedFolderForAction.id, { name: newName });
+      
+      // Refresh folder list
+      refetchFolders();
+      
+      // Close modal and reset state
+      setShowRenameFolderModal(false);
+      setSelectedFolderForAction(null);
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+    }
+  };
+  
+  // Open rename folder modal
+  const openRenameFolderModal = () => {
+    setShowRenameFolderModal(true);
+    closeContextMenu();
+  };
+  
+  // Handle folder delete
+  const handleDeleteFolder = async () => {
+    if (!selectedFolderForAction) return;
+    
+    try {
+      await deleteFolder(selectedFolderForAction.id, { force: true });
+      
+      // Refresh folder list
+      refetchFolders();
+      
+      // Close modal and reset state
+      setShowDeleteConfirmation(false);
+      setSelectedFolderForAction(null);
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+    }
+  };
+  
+  // Open delete confirmation dialog
+  const openDeleteConfirmation = () => {
+    setShowDeleteConfirmation(true);
+    closeContextMenu();
+  };
+  
+  // Drag and drop handlers
+  const handleDragStart = (e, folder) => {
+    setDraggedFolder(folder);
+    setIsDragging(true);
+    
+    // Required for Firefox
+    e.dataTransfer.setData('text/plain', folder.id);
+    
+    // Custom drag ghost
+    const ghostElement = document.createElement('div');
+    ghostElement.classList.add('drag-ghost');
+    ghostElement.textContent = folder.name;
+    ghostElement.style.position = 'absolute';
+    ghostElement.style.left = '-9999px';
+    document.body.appendChild(ghostElement);
+    e.dataTransfer.setDragImage(ghostElement, 0, 0);
+    
+    // Clean up ghost after drag operation
+    setTimeout(() => {
+      document.body.removeChild(ghostElement);
+    }, 0);
+  };
+  
+  const handleDragOver = (e, folder) => {
+    e.preventDefault();
+    if (!draggedFolder || draggedFolder.id === folder.id) return;
+    
+    // Don't allow dropping into its own descendants
+    const isDescendant = (parentId, potentialChildId) => {
+      if (parentId === potentialChildId) return true;
+      const children = folders.filter(f => f.parent === parentId);
+      return children.some(child => isDescendant(child.id, potentialChildId));
+    };
+    
+    if (isDescendant(draggedFolder.id, folder.id)) return;
+    
+    setDropTarget(folder.id);
+  };
+  
+  const handleDragLeave = () => {
+    setDropTarget(null);
+  };
+  
+  const handleDrop = async (e, targetFolder) => {
+    e.preventDefault();
+    
+    if (!draggedFolder || draggedFolder.id === targetFolder.id) {
+      setIsDragging(false);
+      setDraggedFolder(null);
+      setDropTarget(null);
+      return;
+    }
+    
+    try {
+      // Move folder to new parent
+      const updates = {
+        parent: targetFolder.id
+      };
+      
+      await updateFolder(draggedFolder.id, updates);
+      
+      // Refresh folder list
+      refetchFolders();
+      
+      // Auto expand the target folder
+      if (!expandedFolders.includes(targetFolder.id)) {
+        setExpandedFolders([...expandedFolders, targetFolder.id]);
+      }
+    } catch (error) {
+      console.error('Failed to move folder:', error);
+    } finally {
+      setIsDragging(false);
+      setDraggedFolder(null);
+      setDropTarget(null);
+    }
+  };
+  
+  // Clean up function for dragging
+  useEffect(() => {
+    const handleDocumentDragEnd = () => {
+      setIsDragging(false);
+      setDraggedFolder(null);
+      setDropTarget(null);
+    };
+    
+    document.addEventListener('dragend', handleDocumentDragEnd);
+    return () => {
+      document.removeEventListener('dragend', handleDocumentDragEnd);
+    };
+  }, []);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      if (contextMenu.visible) {
+        closeContextMenu();
+      }
+    };
+    
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [contextMenu.visible]);
   
   return (
     <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex flex-col">
@@ -142,7 +385,10 @@ const FolderNavigation = ({
             <div className="mt-4 mb-2 px-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Folders</h3>
-                <button className="text-xs text-gray-500 hover:text-gray-700">
+                <button
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => openNewFolderModal(null)}
+                >
                   <Plus size={14} />
                 </button>
               </div>
@@ -168,6 +414,14 @@ const FolderNavigation = ({
                       level={0}
                       onToggle={toggleFolder}
                       onClick={onFolderClick}
+                      handleContextMenu={handleContextMenu}
+                      handleDragStart={handleDragStart}
+                      handleDragOver={handleDragOver}
+                      handleDragLeave={handleDragLeave}
+                      handleDrop={handleDrop}
+                      draggedFolder={draggedFolder}
+                      dropTarget={dropTarget}
+                      isDragging={isDragging}
                     />
                   ))
                 }
@@ -265,23 +519,89 @@ const FolderNavigation = ({
           <span>Shortcuts</span>
         </button>
       </div>
+      
+      {/* Folder management modals */}
+      <FolderModal
+        isOpen={showNewFolderModal}
+        onClose={() => setShowNewFolderModal(false)}
+        title={parentFolderForCreate ? "Create Subfolder" : "Create Folder"}
+        onSubmit={handleCreateFolder}
+        submitButtonText="Create"
+      />
+      
+      <FolderModal
+        isOpen={showRenameFolderModal}
+        onClose={() => setShowRenameFolderModal(false)}
+        title="Rename Folder"
+        initialValue={selectedFolderForAction?.name || ''}
+        onSubmit={handleRenameFolder}
+        submitButtonText="Rename"
+      />
+      
+      <ConfirmationDialog
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={handleDeleteFolder}
+        title="Delete Folder"
+        message={`Are you sure you want to delete "${selectedFolderForAction?.name}"? This action cannot be undone.`}
+        confirmButtonText="Delete"
+        confirmButtonColor="red"
+      />
+      
+      {/* Folder context menu */}
+      <FolderContextMenu
+        visible={contextMenu.visible}
+        position={contextMenu.position}
+        onClose={closeContextMenu}
+        onRename={openRenameFolderModal}
+        onDelete={openDeleteConfirmation}
+        onCreateSubfolder={() => openNewFolderModal(contextMenu.folderId)}
+      />
     </div>
   );
 };
 
 // Nested component for folder items
-const FolderItem = ({ folder, allFolders, expandedFolders, currentFolder, currentView, level, onToggle, onClick }) => {
+const FolderItem = ({ 
+  folder, 
+  allFolders, 
+  expandedFolders, 
+  currentFolder, 
+  currentView, 
+  level, 
+  onToggle, 
+  onClick,
+  handleContextMenu,
+  handleDragStart,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  draggedFolder,
+  dropTarget,
+  isDragging
+}) => {
   const hasChildren = allFolders.some(f => f.parent === folder.id);
   const isExpanded = expandedFolders.includes(folder.id);
   const isActive = currentView === 'folder' && currentFolder === folder.id;
+  
+  const isDropTarget = dropTarget === folder.id;
+  const isDragged = draggedFolder && draggedFolder.id === folder.id;
   
   return (
     <div>
       <div 
         className={`flex items-center px-2 py-1.5 rounded-md ${
-          isActive ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
-        }`}
+          isActive ? 'bg-blue-50 text-blue-600' : 
+          isDropTarget ? 'bg-blue-100' : 
+          'hover:bg-gray-100'
+        } ${isDragged ? 'opacity-50' : ''}`}
         style={{ paddingLeft: `${(level * 12) + 8}px` }}
+        onContextMenu={(e) => handleContextMenu(e, folder.id)}
+        draggable="true"
+        onDragStart={(e) => handleDragStart(e, folder)}
+        onDragOver={(e) => handleDragOver(e, folder)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, folder)}
       >
         {hasChildren ? (
           <button 
@@ -328,6 +648,14 @@ const FolderItem = ({ folder, allFolders, expandedFolders, currentFolder, curren
                 level={level + 1}
                 onToggle={onToggle}
                 onClick={onClick}
+                handleContextMenu={handleContextMenu}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDragLeave={handleDragLeave}
+                handleDrop={handleDrop}
+                draggedFolder={draggedFolder}
+                dropTarget={dropTarget}
+                isDragging={isDragging}
               />
             ))
           }

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Menu, Upload, Folders, Search, Filter, Bell, User, X } from 'lucide-react';
+import FolderModal from './FolderModal';
 import FolderNavigation from './FolderNavigation';
 import MediaContent from './MediaContent';
 import DetailsSidebar from './DetailsSidebar';
 import MediaEditor from './MediaEditor';
 import QuickView from './QuickView';
+import { useCreateFolder } from '../hooks/useApi';
 import FilterBar from './FilterBar';
 import { useMedia } from '../hooks/useApi';
 
@@ -34,6 +36,8 @@ const App = () => {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  
   const [showNotifications, setShowNotifications] = useState(false);
   
   // Handle folder navigation
@@ -43,6 +47,29 @@ const App = () => {
     setSelectedMedia([]);
     setShowDetails(false);
     setShowQuickView(false);
+  };
+  
+  // Folder operations
+  const { createFolder, loading: createFolderLoading } = useCreateFolder();
+  
+  const handleCreateFolder = async (name) => {
+    try {
+      await createFolder({
+        name,
+        parent: null // Create at root level from top nav button
+      });
+      
+      // Close modal
+      setShowNewFolderModal(false);
+      
+      // Force the folder navigation to refresh
+      if (currentView !== 'folder') {
+        setCurrentView('folder');
+        setCurrentFolder('all');
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+    }
   };
   
   // Handle collection navigation
@@ -157,7 +184,7 @@ const App = () => {
             </button>
             <button 
               className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md flex items-center space-x-1"
-              onClick={() => {/* Show new folder modal */}}
+              onClick={() => setShowNewFolderModal(true)}
             >
               <Folders size={15} />
               <span>New Folder</span>
@@ -294,6 +321,15 @@ const App = () => {
           onClose={() => setShowImageEditor(false)}
         />
       )}
+      
+      {/* Folder management modals */}
+      <FolderModal
+        isOpen={showNewFolderModal}
+        onClose={() => setShowNewFolderModal(false)}
+        title="Create Folder"
+        onSubmit={handleCreateFolder}
+        submitButtonText="Create"
+      />
     </div>
   );
 };

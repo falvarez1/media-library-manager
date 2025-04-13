@@ -78,6 +78,81 @@ export const useFolderTree = (deps = []) => {
   return useApi(api.folders.getFolderTree, deps, []);
 };
 
+export const useCreateFolder = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const createFolder = async (folderData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.folders.createFolder(folderData);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { createFolder, loading, error, success };
+};
+
+export const useUpdateFolder = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const updateFolder = async (id, updates) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.folders.updateFolder(id, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { updateFolder, loading, error, success };
+};
+
+export const useDeleteFolder = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const deleteFolder = async (id, options = {}) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.folders.deleteFolder(id, options);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { deleteFolder, loading, error, success };
+};
+
 export const useFolderContents = (id, options = {}, deps = []) => {
   return useApi(
     useCallback(() => api.folders.getFolderContents(id, options), [id, options]), 
