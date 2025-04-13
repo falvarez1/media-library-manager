@@ -40,9 +40,9 @@ export const getFolders = async (options = {}) => {
     });
     console.log(`[foldersApi] Found ${filtered.length} folders with parent ${parentValue}`);
   } else {
-    // When parent is undefined, default to null (root folders)
-    filtered = filtered.filter(folder => folder.parent === null);
-    console.log(`[foldersApi] Returning root folders (${filtered.length})`);
+    // When parent is undefined or null, return all folders
+    console.log(`[foldersApi] No parent specified, returning all folders (${filtered.length})`);
+    // No filtering needed here, 'filtered' already contains all folders
   }
   
   return wrapResponse(filtered);
