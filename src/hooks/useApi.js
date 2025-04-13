@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services';
+import config from '../services/config';
 
 /**
  * Generic hook for making API calls
@@ -104,6 +105,20 @@ export const useTags = (options = {}, deps = []) => {
 // Common API hooks for users
 export const useCurrentUser = (deps = []) => {
   return useApi(api.users.getCurrentUser, deps, null);
+};
+
+
+/**
+ * Hook that exposes the current data source configuration
+ * @returns {Object} - Current data source information
+ */
+export const useDataSource = () => {
+  return {
+    isUsingRealApi: config.useRealApi,
+    apiBaseUrl: config.apiBaseUrl,
+    dataSource: config.useRealApi ? 'real' : 'mock',
+    config
+  };
 };
 
 export default useApi;
