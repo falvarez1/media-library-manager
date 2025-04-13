@@ -71,7 +71,18 @@ export const useMediaItem = (id, deps = []) => {
 
 // Common API hooks for folders
 export const useFolders = (options = {}, deps = []) => {
-  return useApi(api.folders.getFolders, deps, [], options);
+  // Log folder requests for debugging
+  console.log('useFolders Hook: Requesting folders with options:', JSON.stringify(options));
+  
+  const result = useApi(api.folders.getFolders, deps, [], options);
+  
+  // Log results for debugging
+  if (result.data) {
+    console.log(`useFolders Hook: Received ${result.data.length} folders`,
+      result.data.map(f => `${f.id} (${f.name})`));
+  }
+  
+  return result;
 };
 
 export const useFolderTree = (deps = []) => {

@@ -313,8 +313,15 @@ const FolderNavigation = ({
   
   const handleDrop = async (e, targetFolder) => {
     e.preventDefault();
+    console.log('Handle drop triggered', {
+      dragged: draggedFolder?.name,
+      draggedId: draggedFolder?.id,
+      target: targetFolder?.name,
+      targetId: targetFolder?.id
+    });
     
     if (!draggedFolder || draggedFolder.id === targetFolder.id) {
+      console.log('Invalid drop operation - same folder or no dragged folder');
       setIsDragging(false);
       setDraggedFolder(null);
       setDropTarget(null);
@@ -322,22 +329,27 @@ const FolderNavigation = ({
     }
     
     try {
+      console.log('Moving folder', draggedFolder.name, 'to parent', targetFolder.name);
       // Move folder to new parent
       const updates = {
         parent: targetFolder.id
       };
       
-      await updateFolder(draggedFolder.id, updates);
+      const result = await updateFolder(draggedFolder.id, updates);
+      console.log('Folder move result:', result);
       
       // Refresh folder list
+      console.log('Refreshing folder list');
       refetchFolders();
       
       // Auto expand the target folder
       if (!expandedFolders.includes(targetFolder.id)) {
+        console.log('Auto-expanding target folder');
         setExpandedFolders([...expandedFolders, targetFolder.id]);
       }
     } catch (error) {
       console.error('Failed to move folder:', error);
+      alert(`Error moving folder: ${error.message || 'Unknown error'}`);
     } finally {
       setIsDragging(false);
       setDraggedFolder(null);
@@ -820,9 +832,12 @@ const FolderItem = ({
         ) : (
           <div className="w-5"></div>
         )}
-        <button 
+        <button
           className="flex-1 flex items-center space-x-2 text-left truncate"
-          onClick={() => onClick(folder.id)}
+          onClick={() => {
+            console.log(`FolderItem: Folder clicked: ${folder.id} (${folder.name})`);
+            onClick(folder.id);
+          }}
         >
           <Folders size={16} style={{ color: folder.color }} />
           <span className="truncate">{folder.name}</span>

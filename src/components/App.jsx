@@ -101,6 +101,7 @@ const App = () => {
   
   // Handle folder navigation
   const handleFolderClick = (folderId) => {
+    console.log(`App: Folder clicked: ${folderId}`);
     setCurrentFolder(folderId);
     setCurrentView('folder');
     setSelectedMedia([]);

@@ -61,8 +61,37 @@ export const simulateRandomFailure = (
   status = 500,
   code = 'server_error'
 ) => {
-  if (Math.random() < probability) {
-    throw createError(message, status, code);
+  // For debugging, we can optionally force failures or disable them
+  const debugMode = false;
+  const forceFailure = false;
+  const disableFailures = true;
+  
+  // In debug mode, log potential failures
+  if (debugMode) {
+    console.log(`Simulating potential failure (${probability * 100}% chance): ${message}`);
+  }
+  
+  // Skip failures if disabled
+  if (disableFailures) return;
+  
+  // Force failure if needed
+  if (forceFailure || Math.random() < probability) {
+    // Create a more detailed error message
+    const detailedMessage = `${message} (This is a simulated error with ${probability * 100}% probability)`;
+    const error = createError(detailedMessage, status, code);
+    
+    // Add debug info to the error
+    error.debug = {
+      simulatedFailure: true,
+      timestamp: new Date().toISOString(),
+      probability
+    };
+    
+    if (debugMode) {
+      console.error('Simulated API failure:', error);
+    }
+    
+    throw error;
   }
 };
 

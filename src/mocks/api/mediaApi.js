@@ -37,7 +37,6 @@ export const getMedia = async (options = {}) => {
     starred = null,
     favorited = null
   } = options;
-  
   // Filter by folder
   let filtered = [...mediaItems];
   
@@ -62,13 +61,18 @@ export const getMedia = async (options = {}) => {
       // Find all child folders
       findChildFolders(folder);
       
+      console.log(`Filtering media for folder ${folder} and children:`, folderIds);
+      
       // Filter media by any folder in the hierarchy
       filtered = filtered.filter(item => folderIds.includes(item.folder));
+      console.log(`Found ${filtered.length} media items in folder(s)`, folderIds);
     } catch (error) {
       console.error('Error filtering by folder:', error);
       // If there's an error, just filter by the exact folder ID
       filtered = filtered.filter(item => item.folder === folder);
     }
+  } else {
+    console.log('No folder filtering applied or showing all media');
   }
   
   // Filter by collection

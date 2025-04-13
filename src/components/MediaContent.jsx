@@ -76,18 +76,22 @@ const MediaContent = ({
   const getApiOptions = () => {
     console.log('Building API options with currentFolder:', currentFolder);
     
+    // Create base options with defaults for everything
     const options = {
-      sortBy,
-      sortOrder,
-      types: filters.types,
-      tags: filters.tags,
-      status: filters.status,
-      used: filters.usage === 'used' ? true : filters.usage === 'unused' ? false : null,
+      sortBy: sortBy || 'name',
+      sortOrder: sortOrder || 'asc',
+      types: filters?.types || [],
+      tags: filters?.tags || [],
+      status: filters?.status || [],
+      used: filters?.usage === 'used' ? true : filters?.usage === 'unused' ? false : null,
+      folder: null,
+      collection: null,
+      search: ''
     };
 
     if (currentView === 'folder') {
       // Use 'all' for All Media view, otherwise pass the specific folder ID
-      if (currentFolder !== 'all') {
+      if (currentFolder && currentFolder !== 'all') {
         options.folder = currentFolder;
         console.log('Setting folder filter to:', currentFolder);
       } else {
@@ -112,19 +116,35 @@ const MediaContent = ({
 
   // Fetch media items based on current view
   const apiOptions = useMemo(() => {
-    // Force re-evaluation when folder changes
-    console.log('Rebuilding apiOptions with folder:', currentFolder);
-    return getApiOptions();
+    try {
+      // Force re-evaluation when folder changes
+      console.log('Rebuilding apiOptions with folder:', currentFolder);
+      return getApiOptions();
+    } catch (error) {
+      console.error('Error building API options:', error);
+      // Return default options if there's an error
+      return {
+        sortBy: 'name',
+        sortOrder: 'asc',
+        types: [],
+        tags: [],
+        status: []
+      };
+    }
   }, [
     currentView,
     currentFolder,
     currentCollection,
     searchTerm,
-    filters,
     sortBy,
-    sortOrder
+    sortOrder,
+    filters?.types,
+    filters?.tags,
+    filters?.status,
+    filters?.usage
   ]);
   
+  // Use a simpler dependency array
   const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(apiOptions, [
     currentView,
     currentFolder,
@@ -133,8 +153,9 @@ const MediaContent = ({
     sortBy,
     sortOrder,
     JSON.stringify(filters),
-    JSON.stringify(apiOptions)  // Include apiOptions to ensure re-fetch when folder changes
+    apiOptions.folder // Explicitly include folder to trigger refetch
   ]);
+  
   // Get media items with debug logging
   const mediaItems = mediaData?.items || [];
   
@@ -143,19 +164,33 @@ const MediaContent = ({
     currentView,
     currentFolder,
     mediaItemsCount: mediaItems.length,
+    apiOptions: JSON.stringify(apiOptions),
     mediaLoading,
     mediaError
   });
+  
+  // Safe logging of folders
+  if (mediaItems.length > 0) {
+    console.log('Media item folders:', mediaItems.map(item => item.folder).filter(Boolean));
+  }
 
   // Fetch folders for the current folder
   const foldersOptions = { parent: currentFolder === 'all' ? null : currentFolder };
-  const { data: foldersData, loading: foldersLoading, error: foldersError } =
-    useFolders(foldersOptions, [currentFolder]);
+  const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
+    useFolders(foldersOptions, [currentFolder, JSON.stringify(foldersOptions)]);
 
   // Get child folders of the current folder
-  const childrenFolders = currentView === 'folder' && currentFolder !== 'all' 
+  const childrenFolders = currentView === 'folder' && currentFolder !== 'all'
     ? (foldersData || []).filter(folder => folder.parent === currentFolder)
-    : [];
+    : currentView === 'folder' && currentFolder === 'all'
+      ? (foldersData || []).filter(folder => folder.parent === null) // Show root folders in All Media view
+      : [];
+    
+  // Log folder structure for debugging
+  useEffect(() => {
+    console.log('Current folder:', currentFolder);
+    console.log('Children folders:', childrenFolders.map(f => `${f.id} (${f.name})`));
+  }, [currentFolder, childrenFolders]);
 
   // Fetch collection data if needed
   const { data: collectionData, loading: collectionLoading, error: collectionError } =
@@ -588,12 +623,18 @@ const MediaContent = ({
                   key={folder.id}
                   className="flex flex-col items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
                   onClick={() => {
-                    console.log("Subfolder clicked:", folder.id);
-                    if (onFolderClick) onFolderClick(folder.id);
+                    console.log("SubfolderClick: Navigating to folder:", folder.id, folder.name);
+                    if (onFolderClick) {
+                      onFolderClick(folder.id);
+                    }
                   }}
+                  data-folder-id={folder.id}
                 >
                   <Folders size={32} style={{ color: folder.color }} className="mb-2" />
-                  <span className="text-sm truncate w-full text-center">{folder.name}</span>
+                  <span className="text-sm font-medium truncate w-full text-center">{folder.name}</span>
+                  <span className="text-xs text-gray-500 mt-1">
+                    {folder.path ? folder.path : folder.name}
+                  </span>
                 </button>
               ))}
             </div>
