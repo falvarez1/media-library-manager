@@ -481,13 +481,13 @@ const FolderNavigation = ({
             
             <div className="space-y-0.5">
               {/* Render root folders directly from mock data */}
-              {mockFolders
+              {(folders || []) // Use fetched folders data, provide default empty array
                 .filter(folder => folder.parent === null)
                 .map(folder => (
                   <FolderItem
                     key={folder.id}
                     folder={folder}
-                    allFolders={mockFolders}
+                    allFolders={folders || []} // Pass fetched folders down
                     expandedFolders={expandedFolders}
                     currentFolder={currentFolder}
                     currentView={currentView}
@@ -794,11 +794,11 @@ const FolderItem = ({
   isDragging
 }) => {
   // Explicitly check for children by comparing parent IDs as strings for consistency
-  const hasChildren = mockFolders.some(f => f.parent === folder.id);
+  const hasChildren = allFolders.some(f => f.parent === folder.id); // Use allFolders prop
   const isExpanded = expandedFolders.includes(folder.id);
   
   // Get actual child folders for rendering
-  const childFolders = mockFolders.filter(f => f.parent === folder.id);
+  const childFolders = allFolders.filter(f => f.parent === folder.id); // Use allFolders prop
   
   // For debugging
   console.log("Folder:", folder.name, "ID:", folder.id, "Has children:", hasChildren, "Child count:", childFolders.length, "Expanded:", isExpanded);
@@ -823,43 +823,44 @@ const FolderItem = ({
         onDrop={(e) => handleDrop(e, folder)}
       >
         <div className="flex items-center" style={{ marginLeft: `${level * 5}px` }}>
-          {hasChildren ? (
-            <button
-              className="mr-1 text-gray-400 hover:text-gray-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle(folder.id);
-              }}
-            >
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
-          ) : (
-            <div className="w-5"></div>
-          )}
+        {hasChildren ? (
           <button
-            className="flex-1 flex items-center space-x-2 text-left truncate"
-            onClick={() => {
-              console.log(`FolderItem: Folder clicked: ${folder.id} (${folder.name})`);
-              onClick(folder.id);
+              className="mr-1 text-gray-400 hover:text-gray-700"
+            onClick={(e) => {
+                e.stopPropagation();
+              onToggle(folder.id);
             }}
           >
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        ) : (
+            <div className="w-5"></div>
+        )}
+        <button
+            className="flex-1 flex items-center space-x-2 text-left truncate"
+          onClick={() => {
+            console.log(`FolderItem: Folder clicked: ${folder.id} (${folder.name})`);
+            onClick(folder.id);
+          }}
+        >
             <Folders size={16} style={{ color: folder.color }} />
             <span className="truncate">{folder.name}</span>
-          </button>
+        </button>
         </div>
       </div>
       
+      {/* Render children without extra indentation div, padding is handled by recursive FolderItem */}
       {isExpanded && childFolders.length > 0 && (
-        <div className={`${level === 1 ? 'ml-4' : 'ml-5'} pl-0 border-l border-gray-200 space-y-1 mt-1`}>
+        <div className={`${level === 1 ? 'ml-4' : 'ml-5'} pl-0`}>
           {childFolders.map(childFolder => (
             <FolderItem
               key={childFolder.id}
               folder={childFolder}
-              allFolders={mockFolders}
+              allFolders={allFolders} 
               expandedFolders={expandedFolders}
               currentFolder={currentFolder}
               currentView={currentView}
-              level={level + 1}
+              level={level + 1} // Increment level for children
               onToggle={onToggle}
               onClick={onClick}
               handleContextMenu={handleContextMenu}
