@@ -12,20 +12,14 @@ import {
   RotateCw, 
   MoveHorizontal, 
   MoveVertical, 
-  Save
+  Save,
+  Loader
 } from 'lucide-react';
-
-// Mock data (in a real app, this would come from props or context)
-const mockItem = { 
-  id: '1', 
-  type: 'image', 
-  name: 'product-hero.jpg', 
-  url: '/api/placeholder/800/600'
-};
+import { useMediaItem } from '../hooks/useMockApi';
 
 const MediaEditor = ({ mediaId, onClose, onSave }) => {
-  // In a real app, we would fetch the media item by ID
-  const item = mockItem;
+  // Fetch the media item by ID using our hooks
+  const { data: item, loading, error } = useMediaItem(mediaId);
   
   // Editor state
   const [editorTab, setEditorTab] = useState('adjust'); // 'adjust', 'crop', 'filters', 'annotate'
@@ -116,6 +110,52 @@ const MediaEditor = ({ mediaId, onClose, onSave }) => {
     if (onSave) onSave(mediaId);
     onClose();
   };
+  
+  // Loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-30">
+        <div className="bg-white p-8 rounded-lg flex flex-col items-center">
+          <Loader size={40} className="text-blue-500 animate-spin mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">Loading Media Editor</h3>
+          <p className="text-gray-500 mt-2">Please wait while we prepare the editor...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Error state
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-30">
+        <div className="bg-white p-8 rounded-lg max-w-md">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+              <X size={32} />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Editor</h3>
+            <p className="text-gray-500 mb-6">
+              {error.message || "Failed to load the media editor. Please try again."}
+            </p>
+            <div className="flex space-x-3 justify-center">
+              <button 
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                onClick={onClose}
+              >
+                Close
+              </button>
+              <button 
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // If no item found
   if (!item) return null;

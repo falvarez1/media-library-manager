@@ -122,6 +122,13 @@ The application includes a robust mock data system that simulates backend API fu
   - Mock APIs match the interface of real API calls
   - See `src/mocks/README.md` for detailed documentation
 
+- **Data Source Configuration**:
+  - Flexible system for switching between real API and mock data
+  - Configure via environment variables, Next.js runtime config, or UI
+  - Customize API endpoints, mock delays, and error simulation
+  - Settings persist in localStorage for consistent development experience
+  - See [Data Source Configuration](docs/data-source-configuration.md) for detailed documentation
+
 ## API Documentation
 
 The application exposes several API endpoints under the `/api` directory:

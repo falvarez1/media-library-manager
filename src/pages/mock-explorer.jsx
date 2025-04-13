@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import useMockApi from '../hooks/useMockApi';
+import { useApi, useDataSource } from '../hooks/useApi';
 import api from '../mocks/api';
 import { mockData } from '../mocks';
+import DataSourceConfig from '../components/DataSourceConfig';
 
 // Main mock explorer component
 export default function MockDataExplorer() {
@@ -71,10 +72,15 @@ export default function MockDataExplorer() {
               isActive={activeTab === 'users'} 
               onClick={() => handleTabChange('users')} 
             />
-            <TabButton 
-              label="API Tests" 
-              isActive={activeTab === 'api'} 
-              onClick={() => handleTabChange('api')} 
+            <TabButton
+              label="API Tests"
+              isActive={activeTab === 'api'}
+              onClick={() => handleTabChange('api')}
+            />
+            <TabButton
+              label="Config"
+              isActive={activeTab === 'config'}
+              onClick={() => handleTabChange('config')}
             />
           </div>
 
@@ -87,6 +93,7 @@ export default function MockDataExplorer() {
             {activeTab === 'tags' && <TagsSection tagId={id} />}
             {activeTab === 'users' && <UsersSection userId={id} />}
             {activeTab === 'api' && <ApiTestSection />}
+            {activeTab === 'config' && <ConfigSection />}
           </div>
         </div>
       </main>
@@ -163,11 +170,11 @@ function OverviewSection() {
       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
         <h3 className="text-lg font-medium text-blue-800 mb-2">Integration with your app</h3>
         <p className="text-blue-600 mb-3">
-          To use these mocks in your components, import the API functions or use the provided hooks:
+          To use the API in your components, import the hooks from the service layer:
         </p>
         <div className="bg-gray-800 text-white p-3 rounded font-mono text-sm">
           <div>
-            <span className="text-green-400">import</span> <span className="text-blue-300">{'{ useMedia, useFolders }'}</span> <span className="text-green-400">from</span> <span className="text-orange-300">'../hooks/useMockApi'</span>;
+            <span className="text-green-400">import</span> <span className="text-blue-300">{'{ useMedia, useFolders, useDataSource }'}</span> <span className="text-green-400">from</span> <span className="text-orange-300">'../hooks/useApi'</span>;
           </div>
           <div className="mt-1">
             <span className="text-purple-400">const</span> <span className="text-blue-300">MediaList</span> = <span className="text-purple-400">()</span> <span className="text-orange-300">=&gt;</span> <span className="text-blue-300">{'{'}</span>
@@ -175,11 +182,14 @@ function OverviewSection() {
           <div className="pl-2">
             <span className="text-purple-400">const</span> <span className="text-blue-300">{'{ data, loading }'}</span> = <span className="text-yellow-300">useMedia</span><span className="text-blue-300">();</span>
           </div>
+          <div className="pl-2">
+            <span className="text-purple-400">const</span> <span className="text-blue-300">{'{ isUsingRealApi, dataSource }'}</span> = <span className="text-yellow-300">useDataSource</span><span className="text-blue-300">();</span>
+          </div>
           <div className="pl-2 mt-1">
             <span className="text-purple-400">if</span> <span className="text-blue-300">(loading)</span> <span className="text-purple-400">return</span> <span className="text-blue-300">&lt;div&gt;Loading...&lt;/div&gt;;</span>
           </div>
           <div className="pl-2 mt-1">
-            <span className="text-purple-400">return</span> <span className="text-blue-300">(&lt;div&gt;{'{'}data.items.length{'}'} items&lt;/div&gt;);</span>
+            <span className="text-purple-400">return</span> <span className="text-blue-300">(&lt;div&gt;{'{'}data.items.length{'}'} items from {'{'}dataSource{'}'} API&lt;/div&gt;);</span>
           </div>
           <div>
             <span className="text-blue-300">{'}'}</span>;
@@ -218,8 +228,8 @@ function DataCard({ title, count, description, link }) {
 
 // Media section
 function MediaSection({ mediaId }) {
-  const { data: mediaList, loading: listLoading } = useMockApi(api.media.getMedia);
-  const { data: mediaItem, loading: itemLoading } = useMockApi(
+  const { data: mediaList, loading: listLoading } = useApi(api.media.getMedia);
+  const { data: mediaItem, loading: itemLoading } = useApi(
     () => mediaId ? api.media.getMediaById(mediaId) : Promise.resolve(null),
     [mediaId]
   );
@@ -406,8 +416,8 @@ function MediaSection({ mediaId }) {
 
 // Folders section
 function FoldersSection({ folderId }) {
-  const { data: folderTree, loading: treeLoading } = useMockApi(api.folders.getFolderTree);
-  const { data: folderContent, loading: contentLoading } = useMockApi(
+  const { data: folderTree, loading: treeLoading } = useApi(api.folders.getFolderTree);
+  const { data: folderContent, loading: contentLoading } = useApi(
     () => folderId ? api.folders.getFolderContents(folderId) : Promise.resolve(null), 
     [folderId]
   );
@@ -568,8 +578,8 @@ function FolderTreeItem({ folder, level }) {
 
 // Collections section
 function CollectionsSection({ collectionId }) {
-  const { data: collections, loading: collectionsLoading } = useMockApi(api.collections.getCollections);
-  const { data: collectionContent, loading: contentLoading } = useMockApi(
+  const { data: collections, loading: collectionsLoading } = useApi(api.collections.getCollections);
+  const { data: collectionContent, loading: contentLoading } = useApi(
     () => collectionId ? api.collections.getCollectionContents(collectionId) : Promise.resolve(null), 
     [collectionId]
   );
@@ -740,8 +750,8 @@ function CollectionsSection({ collectionId }) {
 
 // Tags section
 function TagsSection({ tagId }) {
-  const { data: tags, loading: tagsLoading } = useMockApi(api.tags.getTags);
-  const { data: tagMedia, loading: mediaLoading } = useMockApi(
+  const { data: tags, loading: tagsLoading } = useApi(api.tags.getTags);
+  const { data: tagMedia, loading: mediaLoading } = useApi(
     () => tagId ? api.tags.getMediaWithTag(tagId) : Promise.resolve(null), 
     [tagId]
   );
@@ -854,8 +864,8 @@ function TagsSection({ tagId }) {
 
 // Users section
 function UsersSection({ userId }) {
-  const { data: users, loading: usersLoading } = useMockApi(api.users.getUsers);
-  const { data: user, loading: userLoading } = useMockApi(
+  const { data: users, loading: usersLoading } = useApi(api.users.getUsers);
+  const { data: user, loading: userLoading } = useApi(
     () => userId ? api.users.getUserById(userId) : Promise.resolve(null), 
     [userId]
   );
@@ -1043,8 +1053,15 @@ function ApiTestSection() {
   const [testResult, setTestResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { isUsingRealApi, dataSource, config } = useDataSource();
 
   const tests = [
+    { id: 'dataSource', name: 'Data Source Info', fn: () => Promise.resolve({ data: {
+      isUsingRealApi,
+      dataSource,
+      apiBaseUrl: config.apiBaseUrl,
+      config
+    }}) },
     { id: 'getMedia', name: 'Get Media List', fn: () => api.media.getMedia({ page: 1, pageSize: 5 }) },
     { id: 'getMediaById', name: 'Get Media Item', fn: () => api.media.getMediaById('1') },
     { id: 'getFolders', name: 'Get Folders', fn: () => api.folders.getFolders() },
@@ -1073,6 +1090,19 @@ function ApiTestSection() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-gray-800 mb-4">API Tests</h2>
+      
+      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+        <div className="flex items-center">
+          <div className="mr-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {dataSource} API
+            </span>
+          </div>
+          <div className="text-sm text-blue-700">
+            Currently using {isUsingRealApi ? 'real' : 'mock'} data from {isUsingRealApi ? config.apiBaseUrl : 'mock dataset'}
+          </div>
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -1146,6 +1176,50 @@ function ApiTestSection() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Config section
+function ConfigSection() {
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Data Source Configuration</h2>
+      
+      <p className="mb-4">
+        Configure how the application interacts with data sources. Toggle between real API and mock data,
+        customize API endpoints, and configure mock behavior such as response delays and error simulation.
+        Your settings will be saved to localStorage and persisted between sessions.
+      </p>
+      
+      <DataSourceConfig />
+      
+      <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <h3 className="text-lg font-medium text-blue-800 mb-2">Documentation</h3>
+        <p className="text-blue-600 mb-3">
+          For more information about data source configuration, check the following resources:
+        </p>
+        <ul className="list-disc pl-5 text-blue-700">
+          <li>
+            <a
+              href="/docs/data-source-configuration.md"
+              target="_blank"
+              className="underline hover:text-blue-800"
+            >
+              Data Source Configuration Documentation
+            </a>
+          </li>
+          <li>
+            <a
+              href="/src/mocks/README.md"
+              target="_blank"
+              className="underline hover:text-blue-800"
+            >
+              Mock System Documentation
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   );

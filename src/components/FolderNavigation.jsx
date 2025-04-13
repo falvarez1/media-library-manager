@@ -1,61 +1,6 @@
 import { useState } from 'react';
-import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal } from 'lucide-react';
-
-// Mock data for folders, collections, and tags
-const mockFolders = [
-  { id: '1', name: 'Images', parent: null, path: 'Images', color: '#3B82F6' },
-  { id: '2', name: 'Documents', parent: null, path: 'Documents', color: '#10B981' },
-  { id: '3', name: 'Videos', parent: null, path: 'Videos', color: '#F59E0B' },
-  { id: '4', name: 'Marketing', parent: '1', path: 'Images/Marketing', color: '#6366F1' },
-  { id: '5', name: 'Products', parent: '1', path: 'Images/Products', color: '#EC4899' },
-  { id: '6', name: 'Team', parent: '1', path: 'Images/Team', color: '#14B8A6' },
-  { id: '7', name: 'Reports', parent: '2', path: 'Documents/Reports', color: '#8B5CF6' },
-  { id: '8', name: 'Contracts', parent: '2', path: 'Documents/Contracts', color: '#F43F5E' },
-  { id: '9', name: 'Tutorials', parent: '3', path: 'Videos/Tutorials', color: '#EF4444' },
-  { id: '10', name: 'Web Assets', parent: '1', path: 'Images/Web Assets', color: '#0EA5E9' },
-  { id: '11', name: 'Social Media', parent: '1', path: 'Images/Social Media', color: '#F97316' },
-];
-
-const mockCollections = [
-  { 
-    id: '1', 
-    name: 'Homepage Redesign', 
-    description: 'Assets for the new homepage design',
-    items: ['1', '3', '8'],
-    created: '2025-03-10',
-    color: '#8B5CF6'
-  },
-  { 
-    id: '2', 
-    name: 'Spring Campaign', 
-    description: 'Marketing materials for Spring 2025',
-    items: ['3', '5', '6'],
-    created: '2025-02-20',
-    color: '#10B981'
-  },
-  { 
-    id: '3', 
-    name: 'Legal Documents', 
-    description: 'Important contracts and legal files',
-    items: ['4', '7'],
-    created: '2025-01-15',
-    color: '#F43F5E'
-  }
-];
-
-const mockTags = [
-  { id: '1', name: 'product', color: '#3B82F6' },
-  { id: '2', name: 'hero', color: '#10B981' },
-  { id: '3', name: 'banner', color: '#F59E0B' },
-  { id: '4', name: 'team', color: '#8B5CF6' },
-  { id: '5', name: 'report', color: '#EC4899' },
-  { id: '6', name: 'logo', color: '#14B8A6' },
-  { id: '7', name: 'featured', color: '#F43F5E' },
-  { id: '8', name: 'contract', color: '#0EA5E9' },
-  { id: '9', name: 'tutorial', color: '#F97316' },
-  { id: '10', name: 'social', color: '#6366F1' },
-  { id: '11', name: 'seasonal', color: '#EF4444' },
-];
+import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader } from 'lucide-react';
+import { useFolders, useCollections, useTags } from '../hooks/useMockApi';
 
 const FolderNavigation = ({
   currentFolder,
@@ -68,6 +13,11 @@ const FolderNavigation = ({
   onViewChange
 }) => {
   const [expandedFolders, setExpandedFolders] = useState(['1', '2', '3']); // Default expanded folders
+  
+  // Fetch data using hooks
+  const { data: folders, loading: foldersLoading, error: foldersError } = useFolders();
+  const { data: collections, loading: collectionsLoading, error: collectionsError } = useCollections();
+  const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
   // Toggle folder expansion
   const toggleFolder = (folderId) => {
@@ -82,6 +32,33 @@ const FolderNavigation = ({
   const handleSmartFolderClick = (view) => {
     onViewChange(view);
   };
+  
+  // Render loading state
+  const renderLoading = () => (
+    <div className="flex items-center justify-center h-32">
+      <Loader className="animate-spin text-blue-500" size={24} />
+    </div>
+  );
+  
+  // Render error state
+  const renderError = (message) => (
+    <div className="p-4 text-center">
+      <div className="text-red-500 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" x2="12" y1="8" y2="12"/>
+          <line x1="12" x2="12.01" y1="16" y2="16"/>
+        </svg>
+      </div>
+      <p className="text-sm text-gray-600">{message || 'Error loading data'}</p>
+      <button 
+        className="mt-2 text-xs text-blue-600 hover:underline"
+        onClick={() => window.location.reload()}
+      >
+        Retry
+      </button>
+    </div>
+  );
   
   return (
     <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex flex-col">
@@ -171,25 +148,31 @@ const FolderNavigation = ({
               </div>
             </div>
             
-            <div className="space-y-0.5">
-              {/* Render root folders */}
-              {mockFolders
-                .filter(folder => folder.parent === null)
-                .map(folder => (
-                  <FolderItem 
-                    key={folder.id}
-                    folder={folder}
-                    allFolders={mockFolders}
-                    expandedFolders={expandedFolders}
-                    currentFolder={currentFolder}
-                    currentView={currentView}
-                    level={0}
-                    onToggle={toggleFolder}
-                    onClick={onFolderClick}
-                  />
-                ))
-              }
-            </div>
+            {foldersLoading ? (
+              renderLoading()
+            ) : foldersError ? (
+              renderError(foldersError.message)
+            ) : (
+              <div className="space-y-0.5">
+                {/* Render root folders */}
+                {(folders || [])
+                  .filter(folder => folder.parent === null)
+                  .map(folder => (
+                    <FolderItem 
+                      key={folder.id}
+                      folder={folder}
+                      allFolders={folders || []}
+                      expandedFolders={expandedFolders}
+                      currentFolder={currentFolder}
+                      currentView={currentView}
+                      level={0}
+                      onToggle={toggleFolder}
+                      onClick={onFolderClick}
+                    />
+                  ))
+                }
+              </div>
+            )}
           </div>
         )}
         
@@ -203,23 +186,29 @@ const FolderNavigation = ({
               </button>
             </div>
             
-            <div className="space-y-1">
-              {mockCollections.map(collection => (
-                <button
-                  key={collection.id}
-                  className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                    currentView === 'collection' && currentCollection === collection.id 
-                      ? 'bg-blue-50 text-blue-600' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                  onClick={() => onCollectionClick(collection.id)}
-                >
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: collection.color }}></div>
-                  <span className="truncate">{collection.name}</span>
-                  <span className="text-xs text-gray-500 ml-auto">{collection.items.length}</span>
-                </button>
-              ))}
-            </div>
+            {collectionsLoading ? (
+              renderLoading()
+            ) : collectionsError ? (
+              renderError(collectionsError.message)
+            ) : (
+              <div className="space-y-1">
+                {(collections?.items || []).map(collection => (
+                  <button
+                    key={collection.id}
+                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
+                      currentView === 'collection' && currentCollection === collection.id 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => onCollectionClick(collection.id)}
+                  >
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: collection.color }}></div>
+                    <span className="truncate">{collection.name}</span>
+                    <span className="text-xs text-gray-500 ml-auto">{collection.items.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             
             <button className="mt-3 w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center space-x-2">
               <Plus size={14} />
@@ -238,19 +227,25 @@ const FolderNavigation = ({
               </button>
             </div>
             
-            <div className="flex flex-wrap gap-2 mt-2">
-              {mockTags.map(tag => (
-                <button 
-                  key={tag.id}
-                  className="px-2 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200 flex items-center"
-                  onClick={() => {/* Handle tag filter */}}
-                  style={{ backgroundColor: `${tag.color}20` }}
-                >
-                  <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }}></span>
-                  {tag.name}
-                </button>
-              ))}
-            </div>
+            {tagsLoading ? (
+              renderLoading()
+            ) : tagsError ? (
+              renderError(tagsError.message)
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(tags || []).map(tag => (
+                  <button 
+                    key={tag.id}
+                    className="px-2 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200 flex items-center"
+                    onClick={() => {/* Handle tag filter */}}
+                    style={{ backgroundColor: `${tag.color}20` }}
+                  >
+                    <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }}></span>
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            )}
             
             <button className="mt-3 text-sm text-blue-600 hover:underline">
               Manage Tags

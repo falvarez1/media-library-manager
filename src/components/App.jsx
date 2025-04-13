@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Menu, Upload, Folders, Search, Filter, Bell, User, X } from 'lucide-react';
 import FolderNavigation from './FolderNavigation';
 import MediaContent from './MediaContent';
@@ -6,6 +6,7 @@ import DetailsSidebar from './DetailsSidebar';
 import MediaEditor from './MediaEditor';
 import QuickView from './QuickView';
 import FilterBar from './FilterBar';
+import { useMedia } from '../hooks/useMockApi';
 
 const App = () => {
   // Core state
@@ -71,6 +72,41 @@ const App = () => {
     setShowQuickView(true);
   };
   
+  // Navigation handlers for QuickView
+  const handleNavigateNext = useCallback((currentId) => {
+    // We'll implement the actual media fetching logic here when needed
+    // For now, we'll keep the navigation behavior working with a callback
+    // that will be filled in when we implement the actual navigation
+    const nextId = getNextMediaId(currentId);
+    if (nextId) {
+      setQuickViewItem(nextId);
+    }
+  }, []);
+
+  const handleNavigatePrevious = useCallback((currentId) => {
+    // Similar to handleNavigateNext, we'll implement the actual logic later
+    const prevId = getPreviousMediaId(currentId);
+    if (prevId) {
+      setQuickViewItem(prevId);
+    }
+  }, []);
+
+  // Helper functions to get next/previous media IDs
+  // In a real implementation, these would use our hook system to get the actual media items
+  const getNextMediaId = (currentId) => {
+    // This is a placeholder function until we implement the actual navigation
+    // when we refactor other components to use the hook system
+    console.log('Navigate to next item from:', currentId);
+    return null; // Currently returns null, will be implemented properly later
+  };
+
+  const getPreviousMediaId = (currentId) => {
+    // This is a placeholder function until we implement the actual navigation
+    // when we refactor other components to use the hook system
+    console.log('Navigate to previous item from:', currentId);
+    return null; // Currently returns null, will be implemented properly later
+  };
+
   // Open image editor
   const openEditor = () => {
     setShowImageEditor(true);
@@ -236,7 +272,7 @@ const App = () => {
       
       {/* Modals */}
       {showQuickView && quickViewItem && (
-        <QuickView 
+        <QuickView
           mediaId={quickViewItem}
           onClose={() => setShowQuickView(false)}
           onShowDetails={() => {
@@ -244,6 +280,10 @@ const App = () => {
             setShowQuickView(false);
           }}
           onOpenEditor={openEditor}
+          onNavigateNext={handleNavigateNext}
+          onNavigatePrevious={handleNavigatePrevious}
+          onToggleStar={(id) => console.log('Toggle star for', id)}
+          onToggleFavorite={(id) => console.log('Toggle favorite for', id)}
         />
       )}
       

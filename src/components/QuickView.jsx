@@ -1,57 +1,19 @@
 import { useState } from 'react';
-import { X, ArrowLeft, ArrowRight, Info, Edit, Download, Share, Star, Heart, Play } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, Info, Edit, Download, Share, Star, Heart, Play, Loader } from 'lucide-react';
+import { useMediaItem } from '../hooks/useMockApi';
 
-// Mock data (in a real app, this would come from props or context)
-const mockMedia = [
-  { 
-    id: '1', 
-    type: 'image', 
-    name: 'product-hero.jpg', 
-    url: '/api/placeholder/800/600',
-    starred: true,
-    favorited: true
-  },
-  { 
-    id: '2', 
-    type: 'image', 
-    name: 'team-photo.jpg', 
-    url: '/api/placeholder/800/600',
-    starred: false,
-    favorited: false
-  },
-  { 
-    id: '3', 
-    type: 'video', 
-    name: 'product-tutorial.mp4', 
-    url: '#',
-    starred: false,
-    favorited: false
-  },
-  { 
-    id: '4', 
-    type: 'document', 
-    name: 'annual-report-2024.pdf', 
-    url: '#',
-    starred: true,
-    favorited: false
-  }
-];
-
-const QuickView = ({ 
-  mediaId, 
-  onClose, 
+const QuickView = ({
+  mediaId,
+  onClose,
   onShowDetails,
   onOpenEditor,
   onToggleStar,
-  onToggleFavorite
+  onToggleFavorite,
+  onNavigateNext,
+  onNavigatePrevious
 }) => {
-  // In a real app, we would fetch the media item by ID
-  const item = mockMedia.find(m => m.id === mediaId);
-  
-  // Find previous and next items in the collection for navigation
-  const currentIndex = mockMedia.findIndex(m => m.id === mediaId);
-  const previousItem = currentIndex > 0 ? mockMedia[currentIndex - 1] : null;
-  const nextItem = currentIndex < mockMedia.length - 1 ? mockMedia[currentIndex + 1] : null;
+  // Use the hook to fetch media item data
+  const { data: item, loading, error } = useMediaItem(mediaId);
   
   // Handle star toggle
   const handleToggleStar = () => {
@@ -65,20 +27,53 @@ const QuickView = ({
   
   // Navigate to previous item
   const goToPrevious = () => {
-    if (previousItem) {
-      // In a real app, you would use a callback to change the current item
-      console.log('Navigate to previous item:', previousItem.id);
+    if (onNavigatePrevious) {
+      onNavigatePrevious(mediaId);
     }
   };
   
   // Navigate to next item
   const goToNext = () => {
-    if (nextItem) {
-      // In a real app, you would use a callback to change the current item
-      console.log('Navigate to next item:', nextItem.id);
+    if (onNavigateNext) {
+      onNavigateNext(mediaId);
     }
   };
   
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-75">
+        <div className="bg-white rounded-lg p-10 flex flex-col items-center space-y-4">
+          <Loader className="animate-spin text-blue-500" size={32} />
+          <p className="text-gray-700">Loading media...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-75">
+        <div className="bg-white rounded-lg p-8 max-w-lg">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="p-3 bg-red-100 text-red-500 rounded-full">
+              <X size={28} />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800">Error Loading Media</h3>
+            <p className="text-gray-600">{error.message || 'Failed to load media. Please try again later.'}</p>
+            <button
+              className="px-4 py-2 mt-4 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // If no item found
   if (!item) return null;
   
@@ -89,17 +84,17 @@ const QuickView = ({
           <h3 className="font-medium truncate max-w-lg">{item.name}</h3>
           <div className="flex items-center space-x-3">
             <div className="flex space-x-1">
-              <button 
-                className={`p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded ${!previousItem ? 'opacity-50 cursor-not-allowed' : ''}`}
+              <button
+                className={`p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded ${!onNavigatePrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={goToPrevious}
-                disabled={!previousItem}
+                disabled={!onNavigatePrevious}
               >
                 <ArrowLeft size={18} />
               </button>
-              <button 
-                className={`p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded ${!nextItem ? 'opacity-50 cursor-not-allowed' : ''}`}
+              <button
+                className={`p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded ${!onNavigateNext ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={goToNext}
-                disabled={!nextItem}
+                disabled={!onNavigateNext}
               >
                 <ArrowRight size={18} />
               </button>

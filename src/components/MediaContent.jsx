@@ -1,129 +1,7 @@
-import { useState } from 'react';
-import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader } from 'lucide-react';
 import MediaItem from './MediaItem';
-
-// Mock data for media items and folders (in a real app, this would come from props or context)
-const mockMedia = [
-  { 
-    id: '1', 
-    type: 'image', 
-    name: 'product-hero.jpg', 
-    folder: '5', 
-    path: 'Images/Products',
-    size: '2.4 MB', 
-    dimensions: '1920 x 1080',
-    created: '2025-03-15',
-    modified: '2025-04-02',
-    used: true,
-    usedIn: ['Homepage', 'Product Catalog'],
-    tags: ['product', 'hero', 'featured'],
-    url: '/api/placeholder/800/600',
-    starred: true,
-    favorited: true,
-    status: 'approved',
-    ai_tags: ['product', 'minimalist', 'white background', 'luxury item']
-  },
-  { 
-    id: '2', 
-    type: 'image', 
-    name: 'team-photo.jpg', 
-    folder: '6', 
-    path: 'Images/Team',
-    size: '3.1 MB', 
-    dimensions: '2400 x 1600',
-    created: '2025-02-20',
-    modified: '2025-02-20',
-    used: true,
-    usedIn: ['About Page', 'Team Page'],
-    tags: ['team', 'people', 'corporate'],
-    url: '/api/placeholder/800/600',
-    starred: false,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['people', 'group', 'outdoor', 'corporate', 'team building']
-  },
-  { 
-    id: '3', 
-    type: 'image', 
-    name: 'banner-spring.jpg', 
-    folder: '4', 
-    path: 'Images/Marketing',
-    size: '1.8 MB', 
-    dimensions: '1500 x 500',
-    created: '2025-03-01',
-    modified: '2025-03-15',
-    used: true,
-    usedIn: ['Homepage'],
-    tags: ['banner', 'spring', 'seasonal'],
-    url: '/api/placeholder/800/300',
-    starred: false,
-    favorited: true,
-    status: 'approved',
-    ai_tags: ['banner', 'colorful', 'spring', 'promotion', 'seasonal']
-  },
-  { 
-    id: '4', 
-    type: 'document', 
-    name: 'annual-report-2024.pdf', 
-    folder: '7', 
-    path: 'Documents/Reports',
-    size: '4.2 MB', 
-    created: '2025-01-15',
-    modified: '2025-01-15',
-    used: false,
-    usedIn: [],
-    tags: ['report', 'annual', 'financial'],
-    url: '#',
-    starred: true,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['financial', 'report', 'corporate', 'annual']
-  },
-  { 
-    id: '5', 
-    type: 'video', 
-    name: 'product-tutorial.mp4', 
-    folder: '9', 
-    path: 'Videos/Tutorials',
-    size: '28.4 MB', 
-    dimensions: '1920 x 1080',
-    duration: '2:45',
-    created: '2025-02-10',
-    modified: '2025-02-12',
-    used: true,
-    usedIn: ['Product Page', 'Help Center'],
-    tags: ['tutorial', 'product', 'how-to'],
-    url: '#',
-    starred: false,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['tutorial', 'instructional', 'product demo', 'how-to']
-  }
-];
-
-const mockFolders = [
-  { id: '4', name: 'Marketing', parent: '1', path: 'Images/Marketing', color: '#6366F1' },
-  { id: '5', name: 'Products', parent: '1', path: 'Images/Products', color: '#EC4899' },
-  { id: '6', name: 'Team', parent: '1', path: 'Images/Team', color: '#14B8A6' },
-];
-
-const mockCollections = [
-  { 
-    id: '1', 
-    name: 'Homepage Redesign', 
-    items: ['1', '3', '8']
-  },
-  { 
-    id: '2', 
-    name: 'Spring Campaign', 
-    items: ['3', '5', '6']
-  },
-  { 
-    id: '3', 
-    name: 'Legal Documents', 
-    items: ['4', '7']
-  }
-];
+import { useMedia, useFolders, useCollections } from '../hooks/useMockApi';
 
 const MediaContent = ({
   currentView,
@@ -144,85 +22,76 @@ const MediaContent = ({
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   
-  // Get current items based on view
-  const getCurrentItems = () => {
+  // Prepare API options based on view type and filters
+  const getApiOptions = () => {
+    const options = {
+      sortBy,
+      sortOrder,
+      types: filters.types,
+      tags: filters.tags,
+      status: filters.status,
+      used: filters.usage === 'used' ? true : filters.usage === 'unused' ? false : null,
+    };
+
     if (currentView === 'folder') {
-      return mockMedia.filter(item => item.folder === currentFolder || currentFolder === 'all');
+      options.folder = currentFolder;
     } else if (currentView === 'collection') {
-      const collection = mockCollections.find(c => c.id === currentCollection);
-      return mockMedia.filter(item => collection?.items.includes(item.id));
+      options.collection = currentCollection;
     } else if (currentView === 'search') {
-      return mockMedia.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      options.search = searchTerm;
     } else if (currentView === 'starred') {
-      return mockMedia.filter(item => item.starred);
+      options.starred = true;
     } else if (currentView === 'favorites') {
-      return mockMedia.filter(item => item.favorited);
+      options.favorited = true;
     } else if (currentView === 'recent') {
-      // Sort by modified date and take the most recent
-      return [...mockMedia].sort((a, b) => new Date(b.modified) - new Date(a.modified)).slice(0, 20);
-    } else {
-      return [];
+      options.sortBy = 'modified';
+      options.sortOrder = 'desc';
+      options.pageSize = 20;
     }
+
+    return options;
   };
+
+  // Fetch media items based on current view
+  const apiOptions = useMemo(() => getApiOptions(), [
+    currentView, 
+    currentFolder, 
+    currentCollection, 
+    searchTerm, 
+    filters, 
+    sortBy, 
+    sortOrder
+  ]);
   
-  // Apply filters
-  const filterItems = (items) => {
-    if (!filterActive) return items;
-    
-    return items.filter(item => {
-      // Filter by type
-      if (filters.types.length > 0 && !filters.types.includes(item.type)) return false;
-      
-      // Filter by tags
-      if (filters.tags.length > 0 && !filters.tags.some(tag => item.tags.includes(tag))) return false;
-      
-      // Filter by usage
-      if (filters.usage === 'used' && !item.used) return false;
-      if (filters.usage === 'unused' && item.used) return false;
-      
-      // Filter by status
-      if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
-      
-      return true;
-    });
-  };
+  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(apiOptions, [apiOptions]);
   
-  // Get filtered items
-  const filteredItems = filterItems(getCurrentItems());
-  
-  // Sort items
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    let comparison = 0;
-    
-    switch(sortBy) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case 'size':
-        const sizeA = parseFloat(a.size);
-        const sizeB = parseFloat(b.size);
-        comparison = sizeA - sizeB;
-        break;
-      case 'date':
-        comparison = new Date(a.modified) - new Date(b.modified);
-        break;
-      case 'type':
-        comparison = a.type.localeCompare(b.type);
-        break;
-      default:
-        comparison = a.name.localeCompare(b.name);
-    }
-    
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-  
+  // Get media items
+  const mediaItems = mediaData?.items || [];
+
+  // Fetch folders for the current folder
+  const { data: foldersData, loading: foldersLoading, error: foldersError } = 
+    useFolders({}, [currentFolder]);
+
   // Get child folders of the current folder
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all' 
-    ? mockFolders.filter(folder => folder.parent === currentFolder)
+    ? (foldersData || []).filter(folder => folder.parent === currentFolder)
     : [];
+
+  // Fetch collection data if needed
+  const { data: collectionsData, loading: collectionsLoading, error: collectionsError } = 
+    useCollections({}, [currentCollection]);
+
+  // Get the current collection if relevant
+  const currentCollectionData = currentView === 'collection' && currentCollection 
+    ? (collectionsData?.items || []).find(c => c.id === currentCollection) 
+    : null;
+
+  // Loading all data
+  const isLoading = mediaLoading || foldersLoading || collectionsLoading;
+  
+  // Has error
+  const hasError = mediaError || foldersError || collectionsError;
+  const errorMessage = mediaError?.message || foldersError?.message || collectionsError?.message;
   
   // Calculate grid class based on size
   const getGridClass = () => {
@@ -243,7 +112,7 @@ const MediaContent = ({
     
     // Handle multi-select with shift key
     if (event.shiftKey && selectedMedia.length > 0) {
-      const items = sortedItems.map(item => item.id);
+      const items = mediaItems.map(item => item.id);
       const lastSelectedIndex = items.indexOf(selectedMedia[selectedMedia.length - 1]);
       const currentIndex = items.indexOf(mediaId);
       
@@ -278,7 +147,7 @@ const MediaContent = ({
   
   // Select all items
   const selectAll = () => {
-    onSelect(sortedItems.map(item => item.id));
+    onSelect(mediaItems.map(item => item.id));
   };
   
   // Deselect all items
@@ -289,11 +158,10 @@ const MediaContent = ({
   // Format path string
   const formatPathString = () => {
     if (currentView === 'folder') {
-      const folder = mockFolders.find(f => f.id === currentFolder);
+      const folder = (foldersData || []).find(f => f.id === currentFolder);
       return folder ? folder.path : 'All Media';
     } else if (currentView === 'collection') {
-      const collection = mockCollections.find(c => c.id === currentCollection);
-      return `Collection: ${collection?.name || ''}`;
+      return `Collection: ${currentCollectionData?.name || ''}`;
     } else if (currentView === 'search') {
       return `Search: ${searchTerm}`;
     } else if (['recent', 'starred', 'favorites'].includes(currentView)) {
@@ -440,8 +308,37 @@ const MediaContent = ({
       
       {/* Media content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Subfolders section - only shown when in folder view */}
-        {currentView === 'folder' && childrenFolders.length > 0 && (
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Loader className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+            <p className="text-gray-500">Loading media...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {hasError && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <div className="p-3 bg-red-100 text-red-500 rounded-full mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-triangle">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                <line x1="12" x2="12" y1="9" y2="13"></line>
+                <line x1="12" x2="12.01" y1="17" y2="17"></line>
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Failed to load media</h3>
+            <p className="text-gray-600 max-w-md mb-6">{errorMessage || 'An error occurred while loading media. Please try again.'}</p>
+            <button 
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Subfolders section - only shown when in folder view and not loading/error */}
+        {!isLoading && !hasError && currentView === 'folder' && childrenFolders.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2 flex items-center">
               <Folders size={16} className="mr-1.5 text-gray-400" />
@@ -462,40 +359,42 @@ const MediaContent = ({
           </div>
         )}
         
-        {/* Media items */}
-        {sortedItems.length > 0 ? (
-          <>
-            {viewMode === 'grid' ? (
-              <div className={`grid ${getGridClass()} gap-4`}>
-                {sortedItems.map(item => (
-                  <MediaItem 
-                    key={item.id}
-                    item={item}
-                    isSelected={selectedMedia.includes(item.id)}
-                    selectionMode={mediaSelectionMode}
-                    onClick={(e) => handleMediaClick(item.id, e)}
-                    onQuickView={() => onQuickView(item.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <MediaListView 
-                items={sortedItems}
-                selectedMedia={selectedMedia}
-                selectionMode={mediaSelectionMode}
-                onMediaClick={handleMediaClick}
-                onQuickView={onQuickView}
-              />
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-            <Folders size={48} className="mb-4 text-gray-300" />
-            <p>No media found in this location</p>
-            <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-              Upload Media
-            </button>
-          </div>
+        {/* Media items - only shown when not loading/error */}
+        {!isLoading && !hasError && (
+          mediaItems.length > 0 ? (
+            <>
+              {viewMode === 'grid' ? (
+                <div className={`grid ${getGridClass()} gap-4`}>
+                  {mediaItems.map(item => (
+                    <MediaItem 
+                      key={item.id}
+                      item={item}
+                      isSelected={selectedMedia.includes(item.id)}
+                      selectionMode={mediaSelectionMode}
+                      onClick={(e) => handleMediaClick(item.id, e)}
+                      onQuickView={() => onQuickView(item.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <MediaListView 
+                  items={mediaItems}
+                  selectedMedia={selectedMedia}
+                  selectionMode={mediaSelectionMode}
+                  onMediaClick={handleMediaClick}
+                  onQuickView={onQuickView}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <Folders size={48} className="mb-4 text-gray-300" />
+              <p>No media found in this location</p>
+              <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                Upload Media
+              </button>
+            </div>
+          )
         )}
       </div>
     </div>

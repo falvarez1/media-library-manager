@@ -1,53 +1,6 @@
 import { useState } from 'react';
-import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2 } from 'lucide-react';
-
-// Mock media data (in a real app, this would come from props or context)
-const mockMediaItem = {
-  id: '1', 
-  type: 'image', 
-  name: 'product-hero.jpg', 
-  folder: '5', 
-  path: 'Images/Products',
-  size: '2.4 MB', 
-  dimensions: '1920 x 1080',
-  created: '2025-03-15',
-  modified: '2025-04-02',
-  used: true,
-  usedIn: ['Homepage', 'Product Catalog'],
-  tags: ['product', 'hero', 'featured'],
-  url: '/api/placeholder/800/600',
-  starred: true,
-  favorited: true,
-  versions: [
-    { id: 'v1', date: '2025-03-15', size: '2.4 MB', author: 'Sarah Johnson' },
-    { id: 'v2', date: '2025-04-02', size: '2.4 MB', author: 'Michael Chen' }
-  ],
-  comments: [
-    { id: '1', author: 'Lisa Wong', date: '2025-04-01', text: 'Can we brighten this image a bit?' },
-    { id: '2', author: 'Michael Chen', date: '2025-04-02', text: 'Updated with brightness adjustment' }
-  ],
-  metadata: {
-    altText: 'Our flagship product displayed on a minimalist background',
-    copyright: '© 2025 Our Company',
-    caption: 'New Collection Spring 2025',
-    photographer: 'James Wilson',
-    location: 'Studio B'
-  },
-  analytics: {
-    views: 243,
-    downloads: 58,
-    lastAccessed: '2025-04-09'
-  },
-  status: 'approved',
-  ai_tags: ['product', 'minimalist', 'white background', 'luxury item']
-};
-
-// Mock tags data
-const mockTags = [
-  { id: '1', name: 'product', color: '#3B82F6' },
-  { id: '2', name: 'hero', color: '#10B981' },
-  { id: '7', name: 'featured', color: '#F43F5E' },
-];
+import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader } from 'lucide-react';
+import { useMediaItem, useTags } from '../hooks/useMockApi';
 
 const DetailsSidebar = ({ 
   mediaId, 
@@ -56,8 +9,11 @@ const DetailsSidebar = ({
   onToggleStar,
   onToggleFavorite
 }) => {
-  // In a real app, we would fetch the media item by ID
-  const item = mockMediaItem;
+  // Fetch media item by ID using our hook
+  const { data: item, loading: itemLoading, error: itemError } = useMediaItem(mediaId);
+  
+  // Fetch all tags data
+  const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
   // Details tab state
   const [detailsTab, setDetailsTab] = useState('info'); // 'info', 'metadata', 'usage', 'comments'
@@ -82,6 +38,47 @@ const DetailsSidebar = ({
   const handleToggleFavorite = () => {
     if (onToggleFavorite) onToggleFavorite(mediaId);
   };
+  
+  // Loading state
+  if (itemLoading || tagsLoading) {
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto flex items-center justify-center">
+        <div className="flex flex-col items-center p-8">
+          <Loader className="animate-spin text-blue-500 mb-4" size={32} />
+          <p className="text-gray-600">Loading details...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Error state
+  if (itemError || tagsError) {
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="border-b border-gray-200 p-4 flex justify-between items-center">
+          <h3 className="font-medium">Details</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-6 text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="text-red-500" size={24} />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Details</h3>
+          <p className="text-gray-600 mb-4">
+            {itemError?.message || tagsError?.message || "Failed to load media details. Please try again."}
+          </p>
+          <button 
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   // If no item found
   if (!item) return null;
@@ -266,8 +263,8 @@ const DetailsSidebar = ({
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {item.tags.map((tagName, index) => {
-                    const tag = mockTags.find(t => t.name === tagName);
+                  {item.tags && item.tags.map((tagName, index) => {
+                    const tag = tags ? tags.find(t => t.name === tagName) : null;
                     return (
                       <div 
                         key={index} 
