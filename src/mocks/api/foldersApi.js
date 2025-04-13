@@ -20,17 +20,29 @@ export const getFolders = async (options = {}) => {
   await delay();
   simulateRandomFailure(0.02, 'Failed to fetch folders', 503, 'service_unavailable');
   
-  const { parent = null } = options;
+  const { parent } = options;
   
   // Filter by parent if specified
   let filtered = [...folderItems];
-  console.log(`[foldersApi] Fetching folders with parent:`, parent);
+  console.log(`[foldersApi] Fetching folders with parent:`, parent, typeof parent);
   
-  if (parent !== undefined) {
-    filtered = filtered.filter(folder => folder.parent === parent);
-    console.log(`[foldersApi] Found ${filtered.length} folders with parent ${parent}`);
+  // Convert parent to string for consistent comparison, safely handling null values
+  const parentValue = parent !== undefined && parent !== null ? parent.toString() : null;
+  console.log(`[foldersApi] Using parent value:`, parentValue, typeof parentValue);
+  
+  if (parentValue !== undefined && parentValue !== null) {
+    filtered = filtered.filter(folder => {
+      // Also convert folder parent to string for consistent comparison, safely handling null
+      const folderParent = folder.parent !== null && folder.parent !== undefined ? folder.parent.toString() : null;
+      const match = folderParent === parentValue;
+      console.log(`[foldersApi] Checking folder ${folder.id} (${folder.name}): parent=${folderParent}, match=${match}`);
+      return match;
+    });
+    console.log(`[foldersApi] Found ${filtered.length} folders with parent ${parentValue}`);
   } else {
-    console.log(`[foldersApi] Returning all folders (${filtered.length})`);
+    // When parent is undefined, default to null (root folders)
+    filtered = filtered.filter(folder => folder.parent === null);
+    console.log(`[foldersApi] Returning root folders (${filtered.length})`);
   }
   
   return wrapResponse(filtered);

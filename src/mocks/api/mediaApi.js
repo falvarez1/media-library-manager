@@ -37,42 +37,70 @@ export const getMedia = async (options = {}) => {
     starred = null,
     favorited = null
   } = options;
-  // Filter by folder
+  // Filter by folder - Enhanced logging
   let filtered = [...mediaItems];
   
-  if (folder && folder !== 'all') {
+  console.log(`[mediaApi] getMedia called with folder:`, folder, typeof folder);
+  
+  // Ensure folder is treated as a string for filtering, handling null values
+  const folderValue = folder !== null && folder !== undefined ? folder.toString() : null;
+  console.log(`[mediaApi] Converted folder to string:`, folderValue);
+  
+  if (folderValue !== null && folderValue !== 'all') {
     try {
       // Import folders to get the hierarchy
       const foldersModule = await import('../data/folders');
       const allFolders = foldersModule.default;
       
       // Get all folders that are direct or indirect children of the selected folder
-      const folderIds = [folder];
+      const folderIds = [folderValue]; // Use the converted string value
       
-      // Helper function to find child folders
+      // Helper function to find child folders with safer comparison
       const findChildFolders = (parentId) => {
-        const childFolders = allFolders.filter(f => f.parent === parentId);
+        // parentId is already a string at this point
+        const childFolders = allFolders.filter(f => {
+          // Safely convert folder.parent to string for comparison
+          const folderParent = f.parent !== null && f.parent !== undefined ? f.parent.toString() : null;
+          return folderParent === parentId;
+        });
+        
+        console.log(`[mediaApi] Found ${childFolders.length} direct children for folder ${parentId}:`,
+                    childFolders.map(f => `${f.id} (${f.name})`));
+        
         childFolders.forEach(child => {
-          folderIds.push(child.id);
-          findChildFolders(child.id);
+          const childId = child.id !== null && child.id !== undefined ? child.id.toString() : null;
+          if (childId !== null) {
+            folderIds.push(childId);
+            findChildFolders(childId);
+          }
         });
       };
       
       // Find all child folders
       findChildFolders(folder);
       
-      console.log(`Filtering media for folder ${folder} and children:`, folderIds);
+      console.log(`[mediaApi] Filtering media for folder ${folder} and children:`, folderIds);
+      
+      // Debug output each media item's folder
+      console.log(`[mediaApi] Media items before filtering:`,
+                  mediaItems.map(item => ({ id: item.id, name: item.name, folder: item.folder })));
       
       // Filter media by any folder in the hierarchy
-      filtered = filtered.filter(item => folderIds.includes(item.folder));
-      console.log(`Found ${filtered.length} media items in folder(s)`, folderIds);
+      filtered = filtered.filter(item => {
+        // Convert item.folder to string for proper comparison, safely handling null
+        const itemFolder = item.folder !== null && item.folder !== undefined ? item.folder.toString() : null;
+        const isInFolder = itemFolder !== null && folderIds.includes(itemFolder);
+        console.log(`[mediaApi] Media item ${item.id} (${item.name}) in folder ${itemFolder}, match=${isInFolder}`);
+        return isInFolder;
+      });
+      console.log(`[mediaApi] Found ${filtered.length} media items in folder(s)`, folderIds);
     } catch (error) {
-      console.error('Error filtering by folder:', error);
+      console.error('[mediaApi] Error filtering by folder:', error);
       // If there's an error, just filter by the exact folder ID
       filtered = filtered.filter(item => item.folder === folder);
     }
   } else {
-    console.log('No folder filtering applied or showing all media');
+    console.log('[mediaApi] No specific folder filtering applied - showing all media');
   }
   
   // Filter by collection

@@ -119,7 +119,10 @@ const MediaContent = ({
     try {
       // Force re-evaluation when folder changes
       console.log('Rebuilding apiOptions with folder:', currentFolder);
-      return getApiOptions();
+      const options = getApiOptions();
+      // Add debug log to verify the folder is being correctly set
+      console.log('Final apiOptions:', JSON.stringify(options));
+      return options;
     } catch (error) {
       console.error('Error building API options:', error);
       // Return default options if there's an error
@@ -153,7 +156,8 @@ const MediaContent = ({
     sortBy,
     sortOrder,
     JSON.stringify(filters),
-    apiOptions.folder // Explicitly include folder to trigger refetch
+    // Explicitly include folder to trigger refetch, but as a string to ensure it's a stable reference
+    currentFolder // This should be the direct state variable, not apiOptions.folder
   ]);
   
   // Get media items with debug logging
@@ -173,15 +177,25 @@ const MediaContent = ({
   if (mediaItems.length > 0) {
     console.log('Media item folders:', mediaItems.map(item => item.folder).filter(Boolean));
   }
+// Fetch folders for the current folder
+// Enhanced logging for folder options with safe handling of null values
+const foldersOptions = {
+  parent: currentFolder === 'all' ? null :
+          currentFolder !== null && currentFolder !== undefined ? currentFolder : null
+};
+console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions));
 
-  // Fetch folders for the current folder
-  const foldersOptions = { parent: currentFolder === 'all' ? null : currentFolder };
+  
   const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
-    useFolders(foldersOptions, [currentFolder, JSON.stringify(foldersOptions)]);
+    useFolders(foldersOptions, [currentFolder]);
 
-  // Get child folders of the current folder
+  // Get child folders of the current folder - safely handle string comparison
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all'
-    ? (foldersData || []).filter(folder => folder.parent === currentFolder)
+    ? (foldersData || []).filter(folder => {
+        // Safe comparison with type handling
+        if (folder.parent === null || currentFolder === null) return folder.parent === currentFolder;
+        return folder.parent && currentFolder && folder.parent.toString() === currentFolder.toString();
+      })
     : currentView === 'folder' && currentFolder === 'all'
       ? (foldersData || []).filter(folder => folder.parent === null) // Show root folders in All Media view
       : [];
