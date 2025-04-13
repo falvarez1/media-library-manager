@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, Tag, Plus, AlertCircle } from 'lucide-react';
 import MediaItem from './MediaItem';
-import { useMedia, useFolders, useCollections, useAddItemsToCollection } from '../hooks/useApi';
+import { useMedia, useFolders, useCollections, useAddItemsToCollection, useFolderContents } from '../hooks/useApi';
 import TagSelector from './TagSelector';
 
 const MediaContent = ({
@@ -105,6 +105,8 @@ const MediaContent = ({
       options.starred = true;
     } else if (currentView === 'favorites') {
       options.favorited = true;
+    } else if (currentView === 'shared') {
+      options.shared = true;
     } else if (currentView === 'recent') {
       options.sortBy = 'modified';
       options.sortOrder = 'desc';
@@ -188,6 +190,10 @@ console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions)
   
   const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
     useFolders(foldersOptions, [currentFolder]);
+    
+  // Fetch specific folder contents
+  const { data: folderContents, loading: folderContentsLoading } =
+    useFolderContents(currentFolder !== 'all' ? currentFolder : null, {}, [currentFolder]);
 
   // Get child folders of the current folder - safely handle string comparison
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all'
@@ -219,13 +225,12 @@ console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions)
   const childCollections = currentView === 'collection' && currentCollection && collections.length > 0
     ? collections.filter(c => c.parentId === currentCollection)
     : [];
+// Loading all data
+const isLoading = mediaLoading || foldersLoading || collectionLoading || folderContentsLoading;
 
-  // Loading all data
-  const isLoading = mediaLoading || foldersLoading || collectionLoading;
-  
-  // Has error
-  const hasError = mediaError || foldersError || collectionError;
-  const errorMessage = mediaError?.message || foldersError?.message || collectionError?.message;
+// Has error
+const hasError = mediaError || foldersError || collectionError;
+const errorMessage = mediaError?.message || foldersError?.message || collectionError?.message;
   
   // Calculate grid class based on size
   const getGridClass = () => {
@@ -657,13 +662,18 @@ console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions)
         
         {/* Media items - only shown when not loading/error */}
         {!isLoading && !hasError && (
-          mediaItems && mediaItems.length > 0 ? (
+          ((currentFolder !== 'all' && folderContents?.contents?.items?.length > 0) ||
+           (mediaItems && mediaItems.length > 0)) ? (
             <>
-              {console.log('Rendering media items:', { currentFolder, itemsCount: mediaItems.length })}
+              {console.log('Rendering media items:', {
+                currentFolder,
+                folderItemsCount: folderContents?.contents?.items?.length,
+                mediaItemsCount: mediaItems.length
+              })}
               {viewMode === 'grid' ? (
                 <div className={`grid ${getGridClass()} gap-4`}>
-                  {mediaItems.map(item => (
-                    <MediaItem 
+                  {(currentFolder !== 'all' && folderContents?.contents?.items ? folderContents.contents.items : mediaItems).map(item => (
+                    <MediaItem
                       key={item.id}
                       item={item}
                       isSelected={selectedMedia.includes(item.id)}
@@ -677,8 +687,8 @@ console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions)
                   ))}
                 </div>
               ) : (
-                <MediaListView 
-                  items={mediaItems}
+                <MediaListView
+                  items={currentFolder !== 'all' && folderContents?.contents?.items ? folderContents.contents.items : mediaItems}
                   selectedMedia={selectedMedia}
                   selectionMode={mediaSelectionMode}
                   onMediaClick={handleMediaClick}
