@@ -311,6 +311,132 @@ export const useRemoveItemsFromCollection = () => {
   return { removeItems, loading, error, success };
 };
 
+// Hooks for media operations
+export const useMoveMedia = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const moveMedia = async (mediaIds, targetFolderId) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.mediaOperations.moveMedia(mediaIds, targetFolderId);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { moveMedia, loading, error, success };
+};
+
+export const useCopyMedia = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const copyMedia = async (mediaIds, targetFolderId) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.mediaOperations.copyMedia(mediaIds, targetFolderId);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { copyMedia, loading, error, success };
+};
+
+export const useExportMedia = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const exportMedia = async (mediaIds, options = {}) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.mediaOperations.exportMedia(mediaIds, options);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { exportMedia, loading, error, success };
+};
+
+export const useShareMedia = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const shareMedia = async (mediaIds, shareOptions = {}) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.mediaOperations.shareMedia(mediaIds, shareOptions);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { shareMedia, loading, error, success };
+};
+
+export const useBulkImport = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const bulkImport = async (importOptions = {}) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.mediaOperations.bulkImport(importOptions);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { bulkImport, loading, error, success };
+};
+
 // Common API hooks for tags
 export const useTags = (options = {}, deps = []) => {
   return useApi(api.tags.getTags, deps, [], options);

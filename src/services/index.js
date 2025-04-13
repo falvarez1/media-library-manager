@@ -10,6 +10,7 @@ import config from './config';
 
 // Import real API services
 import mediaService from './api/mediaService';
+import mediaOperationsService from './api/mediaOperations';
 import foldersService from './api/foldersService';
 import collectionsService from './api/collectionsService';
 import tagsService from './api/tagsService';
@@ -34,6 +35,7 @@ const selectService = (realApi, mockApi) => {
 
 // Export individual services based on configuration
 export const mediaApi = selectService(mediaService, mockMediaApi);
+export const mediaOperationsApi = mediaOperationsService; // Always use real implementation for operations
 export const foldersApi = selectService(foldersService, mockFoldersApi);
 export const collectionsApi = selectService(collectionsService, mockCollectionsApi);
 export const tagsApi = selectService(tagsService, mockTagsApi);
@@ -44,6 +46,7 @@ export const usersApi = selectService(usersService, mockUsersApi);
  */
 const api = {
   media: mediaApi,
+  mediaOperations: mediaOperationsApi,
   folders: foldersApi,
   collections: collectionsApi,
   tags: tagsApi,
