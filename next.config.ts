@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   env: {
     // API configuration
     NEXT_PUBLIC_USE_REAL_API: process.env.NEXT_PUBLIC_USE_REAL_API || (process.env.NODE_ENV === 'production' ? 'true' : 'false'),
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.medialibrary.example.com/v1',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005',
     
     // Mock configuration
     NEXT_PUBLIC_MOCK_DELAY_MIN: process.env.NEXT_PUBLIC_MOCK_DELAY_MIN || '200',
@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
   publicRuntimeConfig: {
     apiConfig: {
       useRealApi: process.env.NEXT_PUBLIC_USE_REAL_API === 'true',
-      apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api.medialibrary.example.com/v1',
+      apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005',
     },
     mockConfig: {
       delayMin: parseInt(process.env.NEXT_PUBLIC_MOCK_DELAY_MIN || '200', 10),

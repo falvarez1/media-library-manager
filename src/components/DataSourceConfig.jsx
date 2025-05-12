@@ -84,7 +84,7 @@ export default function DataSourceConfig() {
     // Determine default values based on environment
     const defaultValues = {
       useRealApi: process.env.NODE_ENV === 'production',
-      apiBaseUrl: 'https://api.medialibrary.example.com/v1',
+      apiBaseUrl: 'http://localhost:5005',
       mockDelayMin: 200,
       mockDelayMax: 800,
       mockDelayFixed: '',

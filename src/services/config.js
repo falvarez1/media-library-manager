@@ -47,7 +47,7 @@ const config = {
   /**
    * Base URL for API requests
    */
-  apiBaseUrl: getConfigValue('apiBaseUrl', apiConfig.apiBaseUrl, 'https://api.medialibrary.example.com/v1'),
+  apiBaseUrl: getConfigValue('apiBaseUrl', apiConfig.apiBaseUrl, 'http://localhost:5005'),
   
   /**
    * Authentication settings
