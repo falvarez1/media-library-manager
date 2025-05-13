@@ -20,7 +20,14 @@ export const getCollections = async (options = {}) => {
   await delay();
   simulateRandomFailure(0.02, 'Failed to fetch collections', 503, 'service_unavailable');
   
-  const { createdBy = null, isShared = null, page = 1, pageSize = 20 } = options;
+  const { 
+    createdBy = null, 
+    isShared = null, 
+    parentId = null, 
+    page = 1, 
+    pageSize = 20,
+    recursive = false
+  } = options;
   
   // Filter collections
   let filtered = [...collectionItems];
@@ -31,6 +38,27 @@ export const getCollections = async (options = {}) => {
   
   if (isShared !== null) {
     filtered = filtered.filter(collection => collection.isShared === (isShared === 'true' || isShared === true));
+  }
+  
+  // Filter by parent ID
+  if (parentId !== null) {
+    // If recursive is true, get all descendants
+    if (recursive) {
+      const getDescendants = (parentId) => {
+        const directChildren = filtered.filter(collection => collection.parentId === parentId);
+        const descendants = [...directChildren];
+        
+        directChildren.forEach(child => {
+          descendants.push(...getDescendants(child.id));
+        });
+        
+        return descendants;
+      };
+      
+      filtered = getDescendants(parentId);
+    } else {
+      filtered = filtered.filter(collection => collection.parentId === parentId);
+    }
   }
   
   // Return paginated results
@@ -56,6 +84,35 @@ export const getCollectionById = async (id) => {
 };
 
 /**
+ * Get child collections for a given parent collection
+ * @param {string} id - Parent collection ID
+ * @param {Object} options - Query options
+ * @returns {Promise} - Promise resolving to child collections
+ */
+export const getChildCollections = async (id, options = {}) => {
+  await delay();
+  simulateRandomFailure(0.02, 'Failed to fetch child collections', 503, 'service_unavailable');
+  
+  const { page = 1, pageSize = 20 } = options;
+  
+  // Check if parent collection exists
+  const parentCollection = collectionItems.find(collection => collection.id === id);
+  if (!parentCollection) {
+    throw createError('Parent collection not found', 404, 'not_found');
+  }
+  
+  // Get child collections
+  const childCollections = collectionItems.filter(collection => collection.parentId === id);
+  
+  // Return paginated results
+  const paginatedResults = paginate(childCollections, page, pageSize);
+  return wrapResponse({
+    parent: parentCollection,
+    children: paginatedResults
+  });
+};
+
+/**
  * Get collection contents (media items within a collection)
  * @param {string} id - Collection ID
  * @param {Object} options - Query options for pagination
@@ -65,7 +122,7 @@ export const getCollectionContents = async (id, options = {}) => {
   await delay();
   simulateRandomFailure(0.02, 'Failed to fetch collection contents', 503, 'service_unavailable');
   
-  const { page = 1, pageSize = 20 } = options;
+  const { page = 1, pageSize = 20, includeChildCollections = false } = options;
   
   // Check if collection exists
   const collection = collectionItems.find(collection => collection.id === id);
@@ -73,11 +130,33 @@ export const getCollectionContents = async (id, options = {}) => {
     throw createError('Collection not found', 404, 'not_found');
   }
   
+  let allItemIds = [...collection.items];
+  
+  // Include items from child collections if requested
+  if (includeChildCollections === true || includeChildCollections === 'true') {
+    const getChildItemIds = (parentId) => {
+      const childCollections = collectionItems.filter(coll => coll.parentId === parentId);
+      let childItemIds = [];
+      
+      childCollections.forEach(childCollection => {
+        childItemIds = [...childItemIds, ...childCollection.items];
+        // Recursively get items from nested collections
+        childItemIds = [...childItemIds, ...getChildItemIds(childCollection.id)];
+      });
+      
+      return childItemIds;
+    };
+    
+    allItemIds = [...allItemIds, ...getChildItemIds(id)];
+    // Remove duplicates
+    allItemIds = [...new Set(allItemIds)];
+  }
+  
   // Get media items in collection
   const mediaItems = await import('../data/media')
     .then(module => {
       const allMedia = module.default;
-      return allMedia.filter(item => collection.items.includes(item.id));
+      return allMedia.filter(item => allItemIds.includes(item.id));
     });
   
   // Return paginated results
@@ -102,6 +181,14 @@ export const createCollection = async (collectionData) => {
     throw createError('Collection name is required', 400, 'invalid_request');
   }
   
+  // Validate parent ID if provided
+  if (collectionData.parentId) {
+    const parentExists = collectionItems.some(c => c.id === collectionData.parentId);
+    if (!parentExists) {
+      throw createError('Parent collection not found', 404, 'parent_not_found');
+    }
+  }
+  
   // Generate random color if not specified
   const colors = [
     '#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#EC4899', 
@@ -118,6 +205,7 @@ export const createCollection = async (collectionData) => {
     color: collectionData.color || randomColor,
     isShared: collectionData.isShared || false,
     sharedWith: collectionData.sharedWith || [],
+    parentId: collectionData.parentId || null,
     ...collectionData
   };
   
@@ -140,6 +228,33 @@ export const updateCollection = async (id, updates) => {
     throw createError('Collection not found', 404, 'not_found');
   }
   
+  // Validate parent ID if provided
+  if (updates.parentId) {
+    // Prevent circular references
+    if (updates.parentId === id) {
+      throw createError('Collection cannot be its own parent', 400, 'invalid_parent');
+    }
+    
+    // Check if parent exists
+    const parentExists = collectionItems.some(c => c.id === updates.parentId);
+    if (!parentExists) {
+      throw createError('Parent collection not found', 404, 'parent_not_found');
+    }
+    
+    // Check for circular references in the hierarchy
+    const checkCircularReference = (parentId, childId) => {
+      const parent = collectionItems.find(c => c.id === parentId);
+      if (!parent) return false;
+      if (parent.parentId === childId) return true;
+      if (parent.parentId) return checkCircularReference(parent.parentId, childId);
+      return false;
+    };
+    
+    if (checkCircularReference(updates.parentId, id)) {
+      throw createError('Circular reference detected in collection hierarchy', 400, 'circular_reference');
+    }
+  }
+  
   // Create a copy of updates and exclude protected fields
   const allowedUpdates = { ...updates };
   delete allowedUpdates.id;
@@ -160,15 +275,41 @@ export const updateCollection = async (id, updates) => {
 /**
  * Delete a collection
  * @param {string} id - Collection ID
+ * @param {Object} options - Delete options
  * @returns {Promise} - Promise resolving to success message
  */
-export const deleteCollection = async (id) => {
+export const deleteCollection = async (id, options = {}) => {
   await delay();
   simulateRandomFailure(0.03, 'Failed to delete collection', 503, 'service_unavailable');
+  
+  const { deleteChildren = false } = options;
   
   const index = collectionItems.findIndex(collection => collection.id === id);
   if (index === -1) {
     throw createError('Collection not found', 404, 'not_found');
+  }
+  
+  // Check if collection has children
+  const hasChildren = collectionItems.some(c => c.parentId === id);
+  if (hasChildren && !deleteChildren) {
+    throw createError('Collection has child collections. Set deleteChildren to true to delete anyway.', 400, 'has_children');
+  }
+  
+  // Delete child collections recursively if requested
+  if (deleteChildren) {
+    const deleteChildCollections = (parentId) => {
+      const childIds = collectionItems
+        .filter(c => c.parentId === parentId)
+        .map(c => c.id);
+      
+      // Recursively delete children of children
+      childIds.forEach(deleteChildCollections);
+      
+      // Delete children
+      collectionItems = collectionItems.filter(c => c.parentId !== parentId);
+    };
+    
+    deleteChildCollections(id);
   }
   
   // Delete collection
@@ -307,6 +448,7 @@ export const shareCollection = async (id, userIds) => {
 export default {
   getCollections,
   getCollectionById,
+  getChildCollections,
   getCollectionContents,
   createCollection,
   updateCollection,

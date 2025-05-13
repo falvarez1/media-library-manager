@@ -20,12 +20,29 @@ export const getFolders = async (options = {}) => {
   await delay();
   simulateRandomFailure(0.02, 'Failed to fetch folders', 503, 'service_unavailable');
   
-  const { parent = null } = options;
+  const { parent } = options;
   
   // Filter by parent if specified
   let filtered = [...folderItems];
-  if (parent !== undefined) {
-    filtered = filtered.filter(folder => folder.parent === parent);
+  console.log(`[foldersApi] Fetching folders with parent:`, parent, typeof parent);
+  
+  // Convert parent to string for consistent comparison, safely handling null values
+  const parentValue = parent !== undefined && parent !== null ? parent.toString() : null;
+  console.log(`[foldersApi] Using parent value:`, parentValue, typeof parentValue);
+  
+  if (parentValue !== undefined && parentValue !== null) {
+    filtered = filtered.filter(folder => {
+      // Also convert folder parent to string for consistent comparison, safely handling null
+      const folderParent = folder.parent !== null && folder.parent !== undefined ? folder.parent.toString() : null;
+      const match = folderParent === parentValue;
+      console.log(`[foldersApi] Checking folder ${folder.id} (${folder.name}): parent=${folderParent}, match=${match}`);
+      return match;
+    });
+    console.log(`[foldersApi] Found ${filtered.length} folders with parent ${parentValue}`);
+  } else {
+    // When parent is undefined or null, return all folders
+    console.log(`[foldersApi] No parent specified, returning all folders (${filtered.length})`);
+    // No filtering needed here, 'filtered' already contains all folders
   }
   
   return wrapResponse(filtered);
@@ -167,6 +184,7 @@ export const createFolder = async (folderData) => {
  */
 export const updateFolder = async (id, updates) => {
   await delay();
+  console.log('Folder update requested:', { id, updates });
   simulateRandomFailure(0.03, 'Failed to update folder', 503, 'service_unavailable');
   
   const index = folderItems.findIndex(folder => folder.id === id);
@@ -174,11 +192,31 @@ export const updateFolder = async (id, updates) => {
     throw createError('Folder not found', 404, 'not_found');
   }
   
-  // Don't allow changing parent through updates (would require path updates)
+  // Create a copy of updates for modification
   const allowedUpdates = { ...updates };
   delete allowedUpdates.id;
-  delete allowedUpdates.parent;
-  delete allowedUpdates.path;
+  
+  // Handle parent updates by updating the path as well
+  if (updates.parent !== undefined) {
+    console.log('Parent update detected:', updates.parent);
+    const newParent = folderItems.find(f => f.id === updates.parent);
+    if (newParent) {
+      // Get current folder name
+      const folderName = folderItems[index].name;
+      // Generate new path based on parent path
+      allowedUpdates.parent = updates.parent;
+      allowedUpdates.path = newParent.path ? `${newParent.path}/${folderName}` : folderName;
+      console.log('Updated path:', allowedUpdates.path);
+    } else {
+      console.log('Parent not found, ignoring parent update');
+      delete allowedUpdates.parent;
+    }
+  } else {
+    delete allowedUpdates.parent;
+    delete allowedUpdates.path;
+  }
+  
+  console.log('Applying updates:', allowedUpdates);
   
   // Update folder
   folderItems[index] = {

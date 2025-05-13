@@ -518,6 +518,33 @@ const media = [
       author: 'Product Team',
       lastReviewed: '2025-03-28'
     }
+  },
+  {
+    id: '30',
+    type: 'video',
+    name: 'demo-video.mp4',
+    folder: '3',
+    path: 'Videos',
+    size: '24.6 MB',
+    dimensions: '1920 x 1080',
+    duration: '2:15',
+    created: '2025-02-10',
+    modified: '2025-03-01',
+    used: true,
+    usedIn: ['Website homepage', 'Marketing campaign'],
+    stars: 4,
+    comments: 2,
+    favorited: true,
+    starred: true,
+    tags: [
+      'demo', 'product', 'intro'
+    ],
+    ai_tags: [
+      'video', 'demonstration', 'tutorial'
+    ],
+    status: 'approved',
+    url: '/api/videos/30',
+    thumbnail: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=200&auto=format&fit=crop&q=60'
   }
 ];
 

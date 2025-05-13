@@ -1,129 +1,8 @@
-import { useState } from 'react';
-import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, Tag, Plus, AlertCircle } from 'lucide-react';
 import MediaItem from './MediaItem';
-
-// Mock data for media items and folders (in a real app, this would come from props or context)
-const mockMedia = [
-  { 
-    id: '1', 
-    type: 'image', 
-    name: 'product-hero.jpg', 
-    folder: '5', 
-    path: 'Images/Products',
-    size: '2.4 MB', 
-    dimensions: '1920 x 1080',
-    created: '2025-03-15',
-    modified: '2025-04-02',
-    used: true,
-    usedIn: ['Homepage', 'Product Catalog'],
-    tags: ['product', 'hero', 'featured'],
-    url: '/api/placeholder/800/600',
-    starred: true,
-    favorited: true,
-    status: 'approved',
-    ai_tags: ['product', 'minimalist', 'white background', 'luxury item']
-  },
-  { 
-    id: '2', 
-    type: 'image', 
-    name: 'team-photo.jpg', 
-    folder: '6', 
-    path: 'Images/Team',
-    size: '3.1 MB', 
-    dimensions: '2400 x 1600',
-    created: '2025-02-20',
-    modified: '2025-02-20',
-    used: true,
-    usedIn: ['About Page', 'Team Page'],
-    tags: ['team', 'people', 'corporate'],
-    url: '/api/placeholder/800/600',
-    starred: false,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['people', 'group', 'outdoor', 'corporate', 'team building']
-  },
-  { 
-    id: '3', 
-    type: 'image', 
-    name: 'banner-spring.jpg', 
-    folder: '4', 
-    path: 'Images/Marketing',
-    size: '1.8 MB', 
-    dimensions: '1500 x 500',
-    created: '2025-03-01',
-    modified: '2025-03-15',
-    used: true,
-    usedIn: ['Homepage'],
-    tags: ['banner', 'spring', 'seasonal'],
-    url: '/api/placeholder/800/300',
-    starred: false,
-    favorited: true,
-    status: 'approved',
-    ai_tags: ['banner', 'colorful', 'spring', 'promotion', 'seasonal']
-  },
-  { 
-    id: '4', 
-    type: 'document', 
-    name: 'annual-report-2024.pdf', 
-    folder: '7', 
-    path: 'Documents/Reports',
-    size: '4.2 MB', 
-    created: '2025-01-15',
-    modified: '2025-01-15',
-    used: false,
-    usedIn: [],
-    tags: ['report', 'annual', 'financial'],
-    url: '#',
-    starred: true,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['financial', 'report', 'corporate', 'annual']
-  },
-  { 
-    id: '5', 
-    type: 'video', 
-    name: 'product-tutorial.mp4', 
-    folder: '9', 
-    path: 'Videos/Tutorials',
-    size: '28.4 MB', 
-    dimensions: '1920 x 1080',
-    duration: '2:45',
-    created: '2025-02-10',
-    modified: '2025-02-12',
-    used: true,
-    usedIn: ['Product Page', 'Help Center'],
-    tags: ['tutorial', 'product', 'how-to'],
-    url: '#',
-    starred: false,
-    favorited: false,
-    status: 'approved',
-    ai_tags: ['tutorial', 'instructional', 'product demo', 'how-to']
-  }
-];
-
-const mockFolders = [
-  { id: '4', name: 'Marketing', parent: '1', path: 'Images/Marketing', color: '#6366F1' },
-  { id: '5', name: 'Products', parent: '1', path: 'Images/Products', color: '#EC4899' },
-  { id: '6', name: 'Team', parent: '1', path: 'Images/Team', color: '#14B8A6' },
-];
-
-const mockCollections = [
-  { 
-    id: '1', 
-    name: 'Homepage Redesign', 
-    items: ['1', '3', '8']
-  },
-  { 
-    id: '2', 
-    name: 'Spring Campaign', 
-    items: ['3', '5', '6']
-  },
-  { 
-    id: '3', 
-    name: 'Legal Documents', 
-    items: ['4', '7']
-  }
-];
+import { useMedia, useFolders, useCollections, useAddItemsToCollection, useFolderContents } from '../hooks/useApi';
+import TagSelector from './TagSelector';
 
 const MediaContent = ({
   currentView,
@@ -135,7 +14,13 @@ const MediaContent = ({
   selectedMedia = [],
   onSelect,
   onQuickView,
-  onOpenEditor
+  onOpenEditor,
+  onFolderClick,
+  onCollectionClick,
+  collections = [],
+  tags = [],
+  onUpdateCollection,
+  onAddToCollection
 }) => {
   // UI state
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -143,86 +28,224 @@ const MediaContent = ({
   const [mediaSelectionMode, setMediaSelectionMode] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [hoveredCollection, setHoveredCollection] = useState(null);
+  const [showCollectionBar, setShowCollectionBar] = useState(false);
+  const [collectionsToShow, setCollectionsToShow] = useState([]);
   
-  // Get current items based on view
-  const getCurrentItems = () => {
-    if (currentView === 'folder') {
-      return mockMedia.filter(item => item.folder === currentFolder || currentFolder === 'all');
-    } else if (currentView === 'collection') {
-      const collection = mockCollections.find(c => c.id === currentCollection);
-      return mockMedia.filter(item => collection?.items.includes(item.id));
-    } else if (currentView === 'search') {
-      return mockMedia.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    } else if (currentView === 'starred') {
-      return mockMedia.filter(item => item.starred);
-    } else if (currentView === 'favorites') {
-      return mockMedia.filter(item => item.favorited);
-    } else if (currentView === 'recent') {
-      // Sort by modified date and take the most recent
-      return [...mockMedia].sort((a, b) => new Date(b.modified) - new Date(a.modified)).slice(0, 20);
+  // Adding to collection hook
+  const { addItems, loading: addingToCollection } = useAddItemsToCollection();
+  
+  // Collection bar timer
+  const collectionBarTimer = useRef(null);
+  
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (collectionBarTimer.current) {
+        clearTimeout(collectionBarTimer.current);
+      }
+    };
+  }, []);
+  
+  // When selected media changes, check if we should show collection bar
+  useEffect(() => {
+    if (selectedMedia.length > 0) {
+      setShowCollectionBar(true);
+      
+      // Set a timer to hide the collection bar after 5 seconds of inactivity
+      if (collectionBarTimer.current) {
+        clearTimeout(collectionBarTimer.current);
+      }
+      
+      collectionBarTimer.current = setTimeout(() => {
+        setShowCollectionBar(false);
+      }, 5000);
     } else {
-      return [];
+      setShowCollectionBar(false);
     }
-  };
+  }, [selectedMedia]);
   
-  // Apply filters
-  const filterItems = (items) => {
-    if (!filterActive) return items;
+  // Filter collections to show (root collections for easy access)
+  useEffect(() => {
+    const rootCollections = collections.filter(c => !c.parentId);
+    setCollectionsToShow(rootCollections);
+  }, [collections]);
+  
+  // Prepare API options based on view type and filters
+  const getApiOptions = () => {
+    console.log('Building API options with currentFolder:', currentFolder);
     
-    return items.filter(item => {
-      // Filter by type
-      if (filters.types.length > 0 && !filters.types.includes(item.type)) return false;
-      
-      // Filter by tags
-      if (filters.tags.length > 0 && !filters.tags.some(tag => item.tags.includes(tag))) return false;
-      
-      // Filter by usage
-      if (filters.usage === 'used' && !item.used) return false;
-      if (filters.usage === 'unused' && item.used) return false;
-      
-      // Filter by status
-      if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
-      
-      return true;
-    });
-  };
-  
-  // Get filtered items
-  const filteredItems = filterItems(getCurrentItems());
-  
-  // Sort items
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    let comparison = 0;
-    
-    switch(sortBy) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case 'size':
-        const sizeA = parseFloat(a.size);
-        const sizeB = parseFloat(b.size);
-        comparison = sizeA - sizeB;
-        break;
-      case 'date':
-        comparison = new Date(a.modified) - new Date(b.modified);
-        break;
-      case 'type':
-        comparison = a.type.localeCompare(b.type);
-        break;
-      default:
-        comparison = a.name.localeCompare(b.name);
+    // Create base options with defaults for everything
+    const options = {
+      sortBy: sortBy || 'name',
+      sortOrder: sortOrder || 'asc',
+      types: filters?.types || [],
+      tags: filters?.tags || [],
+      status: filters?.status || [],
+      used: filters?.usage === 'used' ? true : filters?.usage === 'unused' ? false : null,
+      folder: null,
+      collection: null,
+      search: ''
+    };
+
+    if (currentView === 'folder') {
+      // Use 'all' for All Media view, otherwise pass the specific folder ID
+      if (currentFolder && currentFolder !== 'all') {
+        options.folder = currentFolder;
+        console.log('Setting folder filter to:', currentFolder);
+      } else {
+        console.log('All folders view');
+      }
+    } else if (currentView === 'collection') {
+      options.collection = currentCollection;
+    } else if (currentView === 'search') {
+      options.search = searchTerm;
+    } else if (currentView === 'starred') {
+      options.starred = true;
+    } else if (currentView === 'favorites') {
+      options.favorited = true;
+    } else if (currentView === 'shared') {
+      options.shared = true;
+    } else if (currentView === 'recent') {
+      options.sortBy = 'modified';
+      options.sortOrder = 'desc';
+      options.pageSize = 20;
     }
-    
-    return sortOrder === 'asc' ? comparison : -comparison;
+
+    return options;
+  };
+
+  // Fetch media items based on current view
+  const apiOptions = useMemo(() => {
+    try {
+      // Force re-evaluation when folder changes
+      console.log('Rebuilding apiOptions with folder:', currentFolder);
+      const options = getApiOptions();
+      // Add debug log to verify the folder is being correctly set
+      console.log('Final apiOptions:', JSON.stringify(options));
+      return options;
+    } catch (error) {
+      console.error('Error building API options:', error);
+      // Return default options if there's an error
+      return {
+        sortBy: 'name',
+        sortOrder: 'asc',
+        types: [],
+        tags: [],
+        status: []
+      };
+    }
+  }, [
+    currentView,
+    currentFolder,
+    currentCollection,
+    searchTerm,
+    sortBy,
+    sortOrder,
+    filters?.types,
+    filters?.tags,
+    filters?.status,
+    filters?.usage
+  ]);
+  
+  // Create a separate parameter for folder to ensure it's properly passed
+  const folderParam = currentFolder !== 'all' ? currentFolder : null;
+  
+  // Create a clean API options object without the folder parameter
+  const cleanApiOptions = { ...apiOptions };
+  delete cleanApiOptions.folder; // Remove folder from options object
+  
+  // Use direct parameters for the API call for clarity
+  console.log('Using folder parameter:', folderParam);
+  console.log('Using API options:', cleanApiOptions);
+  
+  // Call the API with separate folder parameter to avoid confusion
+  const { data: mediaData, loading: mediaLoading, error: mediaError } = useMedia(
+    {
+      ...cleanApiOptions,
+      folder: folderParam // Explicitly set as a direct property to avoid nested objects
+    },
+    [
+      currentView,
+      currentFolder,
+      currentCollection,
+      searchTerm,
+      sortBy,
+      sortOrder,
+      JSON.stringify(filters)
+    ]
+  );
+  
+  // Get media items with debug logging
+  const mediaItems = mediaData?.items || [];
+  
+  // Debug logging
+  console.log('MediaContent Debug:', {
+    currentView,
+    currentFolder,
+    mediaItemsCount: mediaItems.length,
+    apiOptions: JSON.stringify(apiOptions),
+    mediaLoading,
+    mediaError
   });
   
-  // Get child folders of the current folder
-  const childrenFolders = currentView === 'folder' && currentFolder !== 'all' 
-    ? mockFolders.filter(folder => folder.parent === currentFolder)
+  // Safe logging of folders
+  if (mediaItems.length > 0) {
+    console.log('Media item folders:', mediaItems.map(item => item.folder).filter(Boolean));
+  }
+// Fetch folders for the current folder
+// Enhanced logging for folder options with safe handling of null values
+const foldersOptions = {
+  parent: currentFolder === 'all' ? null :
+          currentFolder !== null && currentFolder !== undefined ? currentFolder : null
+};
+console.log('Fetching sub-folders with options:', JSON.stringify(foldersOptions));
+
+  
+  const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
+    useFolders(foldersOptions, [currentFolder]);
+    
+  // Fetch specific folder contents
+  const { data: folderContents, loading: folderContentsLoading } =
+    useFolderContents(currentFolder !== 'all' ? currentFolder : null, {}, [currentFolder]);
+
+  // Get child folders of the current folder - safely handle string comparison
+  const childrenFolders = currentView === 'folder' && currentFolder !== 'all'
+    ? (foldersData || []).filter(folder => {
+        // Safe comparison with type handling
+        if (folder.parent === null || currentFolder === null) return folder.parent === currentFolder;
+        return folder.parent && currentFolder && folder.parent.toString() === currentFolder.toString();
+      })
+    : currentView === 'folder' && currentFolder === 'all'
+      ? (foldersData || []).filter(folder => folder.parent === null) // Show root folders in All Media view
+      : [];
+    
+  // Log folder structure for debugging
+  useEffect(() => {
+    console.log('Current folder:', currentFolder);
+    console.log('Children folders:', childrenFolders.map(f => `${f.id} (${f.name})`));
+  }, [currentFolder, childrenFolders]);
+
+  // Fetch collection data if needed
+  const { data: collectionData, loading: collectionLoading, error: collectionError } =
+    useCollections({ id: currentCollection }, [currentCollection, currentView]);
+  
+  // For collection view, get the current collection
+  const currentCollectionData = currentView === 'collection' && currentCollection && collections.length > 0
+    ? collections.find(c => c.id === currentCollection) 
+    : null;
+  
+  // Get child collections if in collection view
+  const childCollections = currentView === 'collection' && currentCollection && collections.length > 0
+    ? collections.filter(c => c.parentId === currentCollection)
     : [];
+// Loading all data
+const isLoading = mediaLoading || foldersLoading || collectionLoading || folderContentsLoading;
+
+// Has error
+const hasError = mediaError || foldersError || collectionError;
+const errorMessage = mediaError?.message || foldersError?.message || collectionError?.message;
   
   // Calculate grid class based on size
   const getGridClass = () => {
@@ -243,7 +266,7 @@ const MediaContent = ({
     
     // Handle multi-select with shift key
     if (event.shiftKey && selectedMedia.length > 0) {
-      const items = sortedItems.map(item => item.id);
+      const items = mediaItems.map(item => item.id);
       const lastSelectedIndex = items.indexOf(selectedMedia[selectedMedia.length - 1]);
       const currentIndex = items.indexOf(mediaId);
       
@@ -278,7 +301,7 @@ const MediaContent = ({
   
   // Select all items
   const selectAll = () => {
-    onSelect(sortedItems.map(item => item.id));
+    onSelect(mediaItems.map(item => item.id));
   };
   
   // Deselect all items
@@ -289,17 +312,67 @@ const MediaContent = ({
   // Format path string
   const formatPathString = () => {
     if (currentView === 'folder') {
-      const folder = mockFolders.find(f => f.id === currentFolder);
+      const folder = (foldersData || []).find(f => f.id === currentFolder);
       return folder ? folder.path : 'All Media';
     } else if (currentView === 'collection') {
-      const collection = mockCollections.find(c => c.id === currentCollection);
-      return `Collection: ${collection?.name || ''}`;
+      return `Collection: ${currentCollectionData?.name || ''}`;
     } else if (currentView === 'search') {
       return `Search: ${searchTerm}`;
     } else if (['recent', 'starred', 'favorites'].includes(currentView)) {
       return currentView.charAt(0).toUpperCase() + currentView.slice(1);
     } else {
       return '';
+    }
+  };
+  
+  // Drag and drop handlers
+  const handleDragStart = (mediaId) => {
+    setDraggedItem(mediaId);
+  };
+  
+  const handleDragOver = (e, collectionId) => {
+    e.preventDefault();
+    setHoveredCollection(collectionId);
+  };
+  
+  const handleDragLeave = () => {
+    setHoveredCollection(null);
+  };
+  
+  const handleDrop = async (e, collectionId) => {
+    e.preventDefault();
+    setHoveredCollection(null);
+    
+    if (!draggedItem) return;
+    
+    // If dragged one item
+    if (typeof draggedItem === 'string') {
+      await addItems(collectionId, [draggedItem]);
+    } 
+    // If dragged multiple items (from selection)
+    else if (Array.isArray(draggedItem)) {
+      await addItems(collectionId, draggedItem);
+    }
+    
+    setDraggedItem(null);
+  };
+  
+  // Drag selected items
+  const handleDragSelectedItems = () => {
+    if (selectedMedia.length > 0) {
+      setDraggedItem(selectedMedia);
+    }
+  };
+  
+  // Add selected media to collection
+  const handleAddToCollection = async (collectionId) => {
+    if (selectedMedia.length === 0) return;
+    
+    try {
+      await addItems(collectionId, selectedMedia);
+      // Success notification could be added here
+    } catch (error) {
+      console.error('Failed to add items to collection:', error);
     }
   };
   
@@ -351,6 +424,14 @@ const MediaContent = ({
                   <line x1="10" x2="10" y1="11" y2="17"/>
                   <line x1="14" x2="14" y1="11" y2="17"/>
                 </svg>
+              </button>
+              
+              <button 
+                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+                draggable="true"
+                onDragStart={handleDragSelectedItems}
+              >
+                <Folder size={18} />
               </button>
               
               <button 
@@ -438,64 +519,205 @@ const MediaContent = ({
         </div>
       </div>
       
+      {/* Collection quick add bar - only shown when items are selected */}
+      {showCollectionBar && collectionsToShow.length > 0 && (
+        <div 
+          className="bg-gray-50 border-b border-gray-200 px-4 py-2"
+          onMouseEnter={() => {
+            if (collectionBarTimer.current) {
+              clearTimeout(collectionBarTimer.current);
+            }
+          }}
+          onMouseLeave={() => {
+            collectionBarTimer.current = setTimeout(() => {
+              setShowCollectionBar(false);
+            }, 2000);
+          }}
+        >
+          <div className="flex items-center">
+            <div className="text-sm text-gray-600 mr-3">Add to collection:</div>
+            <div className="flex space-x-2 overflow-x-auto py-1 pr-2 max-w-4xl">
+              {collectionsToShow.map(collection => (
+                <button
+                  key={collection.id}
+                  className={`px-3 py-1.5 text-sm rounded-md flex items-center whitespace-nowrap ${
+                    hoveredCollection === collection.id 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                  onClick={() => handleAddToCollection(collection.id)}
+                  onDragOver={(e) => handleDragOver(e, collection.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, collection.id)}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: collection.color }}
+                  ></div>
+                  <span>{collection.name}</span>
+                  {collection.items && (
+                    <span className="ml-1 text-xs text-gray-500">({collection.items.length})</span>
+                  )}
+                </button>
+              ))}
+              <button
+                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md flex items-center"
+                onClick={() => {
+                  // Open create collection modal with selected media
+                  if (onAddToCollection) {
+                    onAddToCollection({
+                      name: `New Collection (${selectedMedia.length} items)`,
+                      items: selectedMedia
+                    });
+                  }
+                }}
+              >
+                <Plus size={14} className="mr-1" />
+                New Collection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Media content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Subfolders section - only shown when in folder view */}
-        {currentView === 'folder' && childrenFolders.length > 0 && (
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Loader className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+            <p className="text-gray-500">Loading media...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {hasError && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <div className="p-3 bg-red-100 text-red-500 rounded-full mb-4">
+              <AlertCircle size={32} />
+            </div>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Failed to load media</h3>
+            <p className="text-gray-600 max-w-md mb-6">{errorMessage || 'An error occurred while loading media. Please try again.'}</p>
+            <button 
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        
+        {/* Collection view: child collections */}
+        {!isLoading && !hasError && currentView === 'collection' && childCollections.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2 flex items-center">
-              <Folders size={16} className="mr-1.5 text-gray-400" />
-              Folders
+              <Folder size={16} className="mr-1.5 text-blue-500" />
+              Sub-Collections
             </h3>
             <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3`}>
-              {childrenFolders.map(folder => (
+              {childCollections.map(collection => (
                 <button
-                  key={folder.id}
-                  className="flex flex-col items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  onClick={() => {/* Handle folder click */}}
+                  key={collection.id}
+                  className={`flex flex-col items-center p-3 border rounded-lg hover:border-blue-200 transition-colors ${
+                    hoveredCollection === collection.id 
+                      ? 'border-blue-300 bg-blue-50' 
+                      : 'border-gray-200 hover:bg-blue-50'
+                  }`}
+                  onClick={() => onCollectionClick(collection.id)}
+                  onDragOver={(e) => handleDragOver(e, collection.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, collection.id)}
                 >
-                  <Folders size={32} style={{ color: folder.color }} className="mb-2" />
-                  <span className="text-sm truncate w-full text-center">{folder.name}</span>
+                  <div className="w-full flex items-center justify-center">
+                    <div 
+                      className="w-12 h-12 rounded-full mb-2 flex items-center justify-center"
+                      style={{ backgroundColor: `${collection.color}20` }}
+                    >
+                      <Folder size={24} style={{ color: collection.color }} />
+                    </div>
+                  </div>
+                  <span className="text-sm truncate w-full text-center font-medium">{collection.name}</span>
+                  <span className="text-xs text-gray-500">{collection.items?.length || 0} items</span>
                 </button>
               ))}
             </div>
           </div>
         )}
-        
-        {/* Media items */}
-        {sortedItems.length > 0 ? (
-          <>
-            {viewMode === 'grid' ? (
-              <div className={`grid ${getGridClass()} gap-4`}>
-                {sortedItems.map(item => (
-                  <MediaItem 
-                    key={item.id}
-                    item={item}
-                    isSelected={selectedMedia.includes(item.id)}
-                    selectionMode={mediaSelectionMode}
-                    onClick={(e) => handleMediaClick(item.id, e)}
-                    onQuickView={() => onQuickView(item.id)}
+
+        {/* Subfolders section with recursive folder tree - only shown when in folder view and not loading/error */}
+        {!isLoading && !hasError && currentView === 'folder' && (childrenFolders && childrenFolders.length > 0) && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              <Folders size={16} className="mr-1.5 text-gray-400" />
+              Folders
+            </h3>
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden p-4">
+              <div className="space-y-1">
+                {childrenFolders.map(folder => (
+                  <FolderTreeItem
+                    key={folder.id}
+                    folder={folder}
+                    level={0}
+                    currentFolder={currentFolder}
+                    allFolders={foldersData || []}
+                    onFolderClick={onFolderClick}
                   />
                 ))}
               </div>
-            ) : (
-              <MediaListView 
-                items={sortedItems}
-                selectedMedia={selectedMedia}
-                selectionMode={mediaSelectionMode}
-                onMediaClick={handleMediaClick}
-                onQuickView={onQuickView}
-              />
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-            <Folders size={48} className="mb-4 text-gray-300" />
-            <p>No media found in this location</p>
-            <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-              Upload Media
-            </button>
+            </div>
           </div>
+        )}
+        
+        {/* Media items - only shown when not loading/error */}
+        {!isLoading && !hasError && (
+          ((currentFolder !== 'all' && folderContents?.contents?.items?.length > 0) ||
+           (mediaItems && mediaItems.length > 0)) ? (
+            <>
+              {console.log('Rendering media items:', {
+                currentFolder,
+                folderItemsCount: folderContents?.contents?.items?.length,
+                mediaItemsCount: mediaItems.length
+              })}
+              {viewMode === 'grid' ? (
+                <div className={`grid ${getGridClass()} gap-4`}>
+                  {/* Display either folder contents for specific folder, or mediaItems for 'all' and other views */}
+                  {(mediaItems && mediaItems.length > 0) && (
+                    mediaItems.map(item => (
+                      <MediaItem
+                        key={item.id}
+                        item={item}
+                        isSelected={selectedMedia.includes(item.id)}
+                        selectionMode={mediaSelectionMode}
+                        onClick={(e) => handleMediaClick(item.id, e)}
+                        onQuickView={() => onQuickView(item.id)}
+                        draggable={true}
+                        onDragStart={() => handleDragStart(item.id)}
+                        tags={tags}
+                      />
+                    ))
+                  )}
+                </div>
+              ) : (
+                <MediaListView
+                  items={currentFolder !== 'all' && folderContents?.contents?.items ? folderContents.contents.items : mediaItems}
+                  selectedMedia={selectedMedia}
+                  selectionMode={mediaSelectionMode}
+                  onMediaClick={handleMediaClick}
+                  onQuickView={onQuickView}
+                  onDragStart={handleDragStart}
+                  tags={tags}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <Folders size={48} className="mb-4 text-gray-300" />
+              <p>No media found in this location</p>
+              <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                Upload Media
+              </button>
+            </div>
+          )
         )}
       </div>
     </div>
@@ -503,7 +725,15 @@ const MediaContent = ({
 };
 
 // List view component
-const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQuickView }) => {
+const MediaListView = ({ 
+  items, 
+  selectedMedia, 
+  selectionMode, 
+  onMediaClick, 
+  onQuickView,
+  onDragStart,
+  tags = []
+}) => {
   // Get status color
   const getStatusColor = (status) => {
     switch(status) {
@@ -531,6 +761,38 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
     }
   };
   
+  // Display tags
+  const renderItemTags = (itemTags) => {
+    if (!itemTags || itemTags.length === 0) return null;
+    
+    // Display at most 2 tags in list view
+    const tagsToShow = itemTags.slice(0, 2);
+    const remaining = itemTags.length - tagsToShow.length;
+    
+    return (
+      <div className="flex items-center space-x-1 ml-2">
+        {tagsToShow.map((tagName, index) => {
+          const tag = tags.find(t => t.name === tagName);
+          return (
+            <div 
+              key={index}
+              className="px-1.5 py-0.5 text-xs rounded-full"
+              style={{ 
+                backgroundColor: tag ? `${tag.color}20` : '#e5e7eb',
+                color: tag ? tag.color : '#374151'
+              }}
+            >
+              {tagName}
+            </div>
+          );
+        })}
+        {remaining > 0 && (
+          <div className="text-xs text-gray-500">+{remaining} more</div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <table className="min-w-full divide-y divide-gray-200">
       <thead className="bg-gray-50">
@@ -549,7 +811,7 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modified</th>
-          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
@@ -560,6 +822,8 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
             key={item.id}
             className={`hover:bg-gray-50 ${selectedMedia.includes(item.id) ? 'bg-blue-50' : ''}`}
             onClick={(e) => onMediaClick(item.id, e)}
+            draggable="true"
+            onDragStart={() => onDragStart(item.id)}
           >
             {selectionMode && (
               <td className="px-4 py-4 whitespace-nowrap">
@@ -609,20 +873,8 @@ const MediaListView = ({ items, selectedMedia, selectionMode, onMediaClick, onQu
             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
               {item.modified}
             </td>
-            <td className="px-4 py-4 whitespace-nowrap text-sm">
-              {item.used ? (
-                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 flex items-center w-fit">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-1">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                  Used
-                </span>
-              ) : (
-                <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 w-fit">
-                  Unused
-                </span>
-              )}
+            <td className="px-4 py-4 whitespace-nowrap">
+              {renderItemTags(item.tags)}
             </td>
             <td className="px-4 py-4 whitespace-nowrap text-sm">
               {item.status && (
@@ -713,5 +965,73 @@ const X = ({ size }) => (
     <path d="m6 6 12 12"/>
   </svg>
 );
+
+// Recursive folder tree item component similar to mock-explorer
+const FolderTreeItem = ({ folder, level, currentFolder, allFolders, onFolderClick }) => {
+  const [expanded, setExpanded] = useState(level === 0);
+  const isActive = currentFolder === folder.id;
+  
+  // Get children folders
+  const children = allFolders.filter(f => f.parent === folder.id);
+  const hasChildren = children.length > 0;
+  
+  return (
+    <div className="select-none">
+      <div
+        className={`flex items-center hover:bg-gray-50 py-1.5 rounded px-1 cursor-pointer ${
+          isActive ? 'bg-blue-50 text-blue-600' : ''
+        }`}
+      >
+        <div className="w-6 text-gray-400" onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}>
+          {hasChildren && (
+            expanded ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )
+          )}
+        </div>
+        
+        <div className="w-5 h-5 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke={folder.color} strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        
+        <div className="flex-1" onClick={() => onFolderClick(folder.id)}>
+          <span className={`hover:text-blue-600 ${isActive ? 'font-medium text-blue-600' : ''}`}>
+            {folder.name}
+          </span>
+        </div>
+        
+        <div className="text-gray-400 text-xs">
+          {folder.path}
+        </div>
+      </div>
+      
+      {expanded && hasChildren && (
+        <div className="ml-6 pl-4 border-l border-gray-200 space-y-1 mt-1">
+          {children.map(child => (
+            <FolderTreeItem
+              key={child.id}
+              folder={child}
+              level={level + 1}
+              currentFolder={currentFolder}
+              allFolders={allFolders}
+              onFolderClick={onFolderClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default MediaContent;

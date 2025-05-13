@@ -61,8 +61,37 @@ export const simulateRandomFailure = (
   status = 500,
   code = 'server_error'
 ) => {
-  if (Math.random() < probability) {
-    throw createError(message, status, code);
+  // For debugging, we can optionally force failures or disable them
+  const debugMode = false;
+  const forceFailure = false;
+  const disableFailures = true;
+  
+  // In debug mode, log potential failures
+  if (debugMode) {
+    console.log(`Simulating potential failure (${probability * 100}% chance): ${message}`);
+  }
+  
+  // Skip failures if disabled
+  if (disableFailures) return;
+  
+  // Force failure if needed
+  if (forceFailure || Math.random() < probability) {
+    // Create a more detailed error message
+    const detailedMessage = `${message} (This is a simulated error with ${probability * 100}% probability)`;
+    const error = createError(detailedMessage, status, code);
+    
+    // Add debug info to the error
+    error.debug = {
+      simulatedFailure: true,
+      timestamp: new Date().toISOString(),
+      probability
+    };
+    
+    if (debugMode) {
+      console.error('Simulated API failure:', error);
+    }
+    
+    throw error;
   }
 };
 
@@ -89,44 +118,4 @@ export const paginate = (items, page = 1, pageSize = 20) => {
       hasPreviousPage: page > 1
     }
   };
-};
-
-/**
- * Parse query parameters for filtering
- * @param {Object} params - Object containing query parameters
- * @param {Array} items - Array of items to filter
- * @returns {Array} - Filtered items
- */
-export const applyFilters = (params, items) => {
-  if (!params || Object.keys(params).length === 0) {
-    return items;
-  }
-
-  return items.filter(item => {
-    // Match every condition in params
-    return Object.entries(params).every(([key, value]) => {
-      // Skip empty values
-      if (value === undefined || value === null || value === '') {
-        return true;
-      }
-
-      // Handle array values (e.g., tags)
-      if (Array.isArray(item[key])) {
-        if (Array.isArray(value)) {
-          // If both are arrays, check for some overlap
-          return value.some(v => item[key].includes(v));
-        }
-        // If value is string but property is array, check if array includes the value
-        return item[key].includes(value);
-      }
-
-      // Handle string values (with partial matching)
-      if (typeof item[key] === 'string' && typeof value === 'string') {
-        return item[key].toLowerCase().includes(value.toLowerCase());
-      }
-
-      // Direct comparison for other types
-      return item[key] === value;
-    });
-  });
 };

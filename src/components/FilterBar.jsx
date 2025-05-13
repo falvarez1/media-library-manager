@@ -1,19 +1,5 @@
-import { X, ChevronDown } from 'lucide-react';
-
-// Mock tag data
-const mockTags = [
-  { id: '1', name: 'product', color: '#3B82F6' },
-  { id: '2', name: 'hero', color: '#10B981' },
-  { id: '3', name: 'banner', color: '#F59E0B' },
-  { id: '4', name: 'team', color: '#8B5CF6' },
-  { id: '5', name: 'report', color: '#EC4899' },
-  { id: '6', name: 'logo', color: '#14B8A6' },
-  { id: '7', name: 'featured', color: '#F43F5E' },
-  { id: '8', name: 'contract', color: '#0EA5E9' },
-  { id: '9', name: 'tutorial', color: '#F97316' },
-  { id: '10', name: 'social', color: '#6366F1' },
-  { id: '11', name: 'seasonal', color: '#EF4444' },
-];
+import { X, ChevronDown, Loader } from 'lucide-react';
+import { useTags } from '../hooks/useMockApi';
 
 const FilterBar = ({ 
   filters, 
@@ -21,6 +7,9 @@ const FilterBar = ({
   setFilterActive,
   onClose
 }) => {
+  // Fetch tags data using our hook system
+  const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
+  
   // Handle clearing all filters
   const clearAllFilters = () => {
     setFilters({
@@ -180,6 +169,44 @@ const FilterBar = ({
     }
   };
   
+  // Render loading state for tags
+  const renderTagsDropdown = () => {
+    if (tagsLoading) {
+      return (
+        <div className="bg-gray-100 border border-gray-200 text-xs rounded-md py-1.5 px-3 flex items-center">
+          <Loader size={12} className="text-gray-500 animate-spin mr-1" />
+          <span>Loading tags...</span>
+        </div>
+      );
+    }
+    
+    if (tagsError) {
+      return (
+        <div className="bg-red-100 border border-red-200 text-xs text-red-600 rounded-md py-1.5 px-3">
+          Error loading tags
+        </div>
+      );
+    }
+    
+    return (
+      <div className="relative inline-block">
+        <select 
+          className="appearance-none bg-gray-100 border border-gray-200 text-xs rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={filters.tags.length ? filters.tags[0] : ''}
+          onChange={handleTagFilterChange}
+        >
+          <option value="">All Tags</option>
+          {(tags || []).map(tag => (
+            <option key={tag.id} value={tag.name}>{tag.name}</option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+          <ChevronDown size={14} />
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className="bg-white border-b border-gray-200 p-3">
       <div className="flex items-center justify-between mb-3">
@@ -220,21 +247,7 @@ const FilterBar = ({
         </div>
         
         {/* Tags Filter */}
-        <div className="relative inline-block">
-          <select 
-            className="appearance-none bg-gray-100 border border-gray-200 text-xs rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            value={filters.tags.length ? filters.tags[0] : ''}
-            onChange={handleTagFilterChange}
-          >
-            <option value="">All Tags</option>
-            {mockTags.map(tag => (
-              <option key={tag.id} value={tag.name}>{tag.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-            <ChevronDown size={14} />
-          </div>
-        </div>
+        {renderTagsDropdown()}
         
         {/* Usage Filter */}
         <div className="relative inline-block">
