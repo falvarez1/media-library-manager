@@ -29,8 +29,6 @@ public static class AuthApi
              .Produces<UnauthorizedHttpResult>(StatusCodes.Status401Unauthorized)
              .ProducesProblem(StatusCodes.Status500InternalServerError);
 
-        // TODO: Add endpoints for logout, refresh token, password reset etc.
-
         return group;
     }
 
@@ -73,8 +71,8 @@ public static class AuthApi
 
         // User created successfully
         logger.LogInformation("User registered successfully: {Email}", registerDto.Email);
-        // TODO: Optionally assign roles here using UserManager.AddToRoleAsync(newUser, "UserRole");
-        // TODO: Optionally send confirmation email
+        // Optional: Assign roles here using UserManager.AddToRoleAsync(newUser, "UserRole");
+        // Optional: Send confirmation email
 
         // Return OK (or Created if you prefer to return user info, though often not done on register)
         return TypedResults.Ok();
@@ -133,7 +131,7 @@ public static class AuthApi
                 new Claim(JwtRegisteredClaimNames.Name, user.UserName!), // User name
                 new Claim(JwtRegisteredClaimNames.Email, user.Email!), // Email
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Unique token identifier
-                // TODO: Add roles if using them:
+                // Example for adding roles if using them:
                 // var roles = await userManager.GetRolesAsync(user);
                 // claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
             };

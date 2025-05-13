@@ -17,10 +17,23 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: AllowFrontendPolicy,
                       policy  =>
                       {
-                          // TODO: Make origin configurable for production
-                          policy.WithOrigins("http://localhost:3000")
-                                .AllowAnyHeader()
-                                .AllowAnyMethod();
+                          var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+                          if (corsOrigins != null && corsOrigins.Length > 0)
+                          {
+                              policy.WithOrigins(corsOrigins)
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod();
+                          }
+                          else
+                          {
+                              // Fallback or default if not configured - for development
+                              if (builder.Environment.IsDevelopment()) {
+                                policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+                                      .AllowAnyHeader()
+                                      .AllowAnyMethod();
+                              }
+                              // In production, you might want to throw an error or have a stricter default
+                          }
                       });
 });
 
@@ -51,22 +64,20 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     .AddDefaultTokenProviders(); // Needed for password reset, email confirmation tokens
 
 // JWT Authentication
-// TODO: Move JWT settings (Key, Issuer, Audience) to appsettings.json
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "YOUR_DEFAULT_SUPER_SECRET_KEY_REPLACE_THIS"; // Replace with strong key from config
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MediaLibraryIssuer";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MediaLibraryAudience";
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
 
-if (jwtKey == "YOUR_DEFAULT_SUPER_SECRET_KEY_REPLACE_THIS")
+if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
 {
-    // Log a warning if the default key is used in development
-    if (builder.Environment.IsDevelopment()) {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("Warning: Using default JWT Key. Replace 'Jwt:Key' in configuration for production.");
-        Console.ResetColor();
-    } else {
-         // Throw an error if default key is used outside development
-         throw new InvalidOperationException("JWT Key must be configured for production environments.");
-    }
+    throw new InvalidOperationException("JWT Key, Issuer, and Audience must be configured in appsettings.json.");
+}
+
+// It's crucial that the JWT Key is strong and kept secret, especially for production.
+// The default key in appsettings.Development.json is for development ONLY.
+if (jwtKey == "REPLACE_THIS_WITH_A_VERY_STRONG_AND_SECRET_KEY_32_CHARS_LONG_OR_MORE" && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("Default JWT Key is being used in a non-development environment. Please configure a strong, unique JWT:Key in appsettings.json for production.");
 }
 
 
@@ -92,8 +103,6 @@ builder.Services.AddAuthentication(options =>
 
 // Authorization (basic setup, policies can be added later)
 builder.Services.AddAuthorization();
-
-// TODO: Add other services (e.g., Logging, Custom Services)
 
 var app = builder.Build();
 

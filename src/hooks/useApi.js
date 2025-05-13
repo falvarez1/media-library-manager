@@ -77,13 +77,6 @@ export const useMedia = (options = {}, deps = []) => {
   return useApi(executeApi, deps, { items: [], meta: {} });
 };
 
-export const useMediaItem = (id, deps = []) => {
-  return useApi(
-    useCallback(() => api.media.getMediaById(id), [id]), 
-    [id, ...deps]
-  );
-};
-
 // Common API hooks for folders
 export const useFolders = (options = {}, deps = []) => {
   // Log folder requests for debugging
@@ -192,27 +185,6 @@ export const useCollections = (options = {}, deps = []) => {
   return useApi(api.collections.getCollections, deps, { items: [], meta: {} }, options);
 };
 
-export const useCollectionContents = (id, options = {}, deps = []) => {
-  return useApi(
-    useCallback(() => api.collections.getCollectionContents(id, options), [id, options]), 
-    [id, ...deps]
-  );
-};
-
-export const useCollection = (id, deps = []) => {
-  return useApi(
-    useCallback(() => api.collections.getCollectionById(id), [id]),
-    [id, ...deps]
-  );
-};
-
-export const useChildCollections = (id, options = {}, deps = []) => {
-  return useApi(
-    useCallback(() => api.collections.getChildCollections(id, options), [id, options]),
-    [id, ...deps]
-  );
-};
-
 export const useCreateCollection = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -311,31 +283,6 @@ export const useAddItemsToCollection = () => {
   };
 
   return { addItems, loading, error, success };
-};
-
-export const useRemoveItemsFromCollection = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-
-  const removeItems = async (collectionId, itemIds) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await api.collections.removeItemsFromCollection(collectionId, itemIds);
-      setSuccess(response);
-      return response.data;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { removeItems, loading, error, success };
 };
 
 // Hooks for media operations
@@ -439,41 +386,9 @@ export const useShareMedia = () => {
   return { shareMedia, loading, error, success };
 };
 
-export const useBulkImport = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-
-  const bulkImport = async (importOptions = {}) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await api.mediaOperations.bulkImport(importOptions);
-      setSuccess(response);
-      return response.data;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { bulkImport, loading, error, success };
-};
-
 // Common API hooks for tags
 export const useTags = (options = {}, deps = []) => {
   return useApi(api.tags.getTags, deps, [], options);
-};
-
-export const useTagById = (id, deps = []) => {
-  return useApi(
-    useCallback(() => api.tags.getTagById(id), [id]),
-    [id, ...deps]
-  );
 };
 
 export const useTagCategories = (deps = []) => {
@@ -555,56 +470,6 @@ export const useDeleteTag = () => {
   return { deleteTag, loading, error, success };
 };
 
-export const useCreateTagCategory = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-
-  const createCategory = async (categoryData) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await api.tags.createTagCategory(categoryData);
-      setSuccess(response);
-      return response.data;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { createCategory, loading, error, success };
-};
-
-export const useUpdateTagCategory = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-
-  const updateCategory = async (id, updates) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await api.tags.updateTagCategory(id, updates);
-      setSuccess(response);
-      return response.data;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { updateCategory, loading, error, success };
-};
-
 export const useBatchUpdateTags = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -632,23 +497,6 @@ export const useBatchUpdateTags = () => {
 
 export const usePopularTags = (options = {}, deps = []) => {
   return useApi(api.tags.getPopularTags, deps, [], options);
-};
-
-export const useTagSuggestions = (query, options = {}, deps = []) => {
-  const mergedOptions = { ...options, query };
-  return useApi(
-    api.tags.getTagSuggestions,
-    [query, ...deps],
-    [],
-    mergedOptions
-  );
-};
-
-export const useMediaWithTag = (tagId, options = {}, deps = []) => {
-  return useApi(
-    useCallback(() => api.tags.getMediaWithTag(tagId, options), [tagId, options]),
-    [tagId, ...deps]
-  );
 };
 
 // Common API hooks for users

@@ -67,7 +67,6 @@ public static class FoldersApi
     // GET /
     public static async Task<Ok<List<Folder>>> GetAllFolders(AppDbContext db)
     {
-        // TODO: Consider if loading children/parent is needed here or just flat list
         var folders = await db.Folders.AsNoTracking().ToListAsync();
         return TypedResults.Ok(folders);
     }
@@ -162,9 +161,8 @@ public static class FoldersApi
         // Only update Name for now
         if (existingFolder.Name != updateDto.Name)
         {
-            // TODO: Add logic to update Path for this folder and ALL descendants if name changes.
-            // This is complex and deferred for now. Just updating name.
-            logger.LogWarning("Updating folder name only for ID {FolderId}. Path update logic is deferred.", id);
+            // Note: Path update logic for descendants is currently deferred.
+            logger.LogWarning("Updating folder name only for ID {FolderId}. Path update logic for descendants is deferred.", id);
             existingFolder.Name = updateDto.Name;
             existingFolder.ModifiedAt = DateTimeOffset.UtcNow;
 
@@ -275,7 +273,6 @@ public static class FoldersApi
                 Name = folder.Name,
                 Path = folder.Path,
                 ParentId = folder.ParentId
-                // TODO: Add MediaItemCount if needed (requires extra query or join)
             };
             lookup[folder.Id] = node;
 
@@ -304,7 +301,6 @@ public static class FoldersApi
         }
 
         // Retrieve media items belonging to this folder
-        // TODO: Add pagination/sorting
         var mediaItems = await db.MediaItems
                                  .Where(m => m.FolderId == id)
                                  .AsNoTracking()

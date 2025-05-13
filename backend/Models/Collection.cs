@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Identity;
 
 namespace backend.Models;
 
@@ -20,7 +22,10 @@ public class Collection
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ModifiedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    // TODO: Add UserId later when User entity is implemented
-    // public Guid UserId { get; set; }
-    // public virtual User User { get; set; }
+    // Foreign Key for the User who owns this collection
+    [Required]
+    public string UserId { get; set; } = string.Empty;
+
+    [ForeignKey("UserId")]
+    public virtual IdentityUser? User { get; set; }
 }

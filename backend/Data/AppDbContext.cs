@@ -32,7 +32,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
         // Configure Folder to MediaItem relationship (One-to-Many)
         modelBuilder.Entity<backend.Models.Folder>()
             .HasMany(f => f.MediaItems)
-            .WithOne() // Assuming MediaItem doesn't need direct navigation back to Folder for now
+            .WithOne(m => m.Folder)
             .HasForeignKey(m => m.FolderId)
             .OnDelete(DeleteBehavior.SetNull); // Set MediaItem.FolderId to null if folder is deleted (or Restrict/Cascade)
 

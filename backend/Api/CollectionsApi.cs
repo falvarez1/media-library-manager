@@ -2,8 +2,10 @@ using backend.Data;
 using backend.Models;
 using backend.Models.Dto;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace backend.Api;
 
@@ -31,6 +33,7 @@ public static class CollectionsApi
         // POST /api/collections
         group.MapPost("/", CreateCollection)
              .WithName("CreateCollection")
+             .RequireAuthorization() // Secure this endpoint
              .Accepts<CreateCollectionDto>("application/json")
              .Produces<Created<Collection>>(StatusCodes.Status201Created)
              .ProducesValidationProblem()
@@ -69,8 +72,6 @@ public static class CollectionsApi
              .Produces<NotFound>() // Collection not found
              .ProducesValidationProblem()
              .ProducesProblem(StatusCodes.Status500InternalServerError);
-
-        // TODO: Add endpoint for sharing collections
 
         return group;
     }
@@ -112,7 +113,6 @@ public static class CollectionsApi
             return TypedResults.NotFound();
         }
 
-        // TODO: Add pagination/sorting for contents if needed
         return TypedResults.Ok(collection.MediaItems.ToList());
     }
 
@@ -121,18 +121,28 @@ public static class CollectionsApi
     public static async Task<Results<Created<Collection>, ValidationProblem, ProblemHttpResult>> CreateCollection(
         [FromBody] CreateCollectionDto createDto,
         AppDbContext db,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("CollectionsApi");
+
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            // This should not happen if [RequireAuthorization] is used and working
+            logger.LogWarning("CreateCollection called without authenticated user.");
+            return TypedResults.Problem("User not authenticated.", statusCode: StatusCodes.Status401Unauthorized);
+        }
 
         var newCollection = new Collection
         {
             Id = Guid.NewGuid(),
             Name = createDto.Name,
             Description = createDto.Description,
+            UserId = userId, // Assign the current user's ID
             CreatedAt = DateTimeOffset.UtcNow,
             ModifiedAt = DateTimeOffset.UtcNow
-            // TODO: Assign UserId when auth is implemented
         };
 
         try

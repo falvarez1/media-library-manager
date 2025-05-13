@@ -16,6 +16,4 @@ public interface IFileStorageService
     /// <param name="relativePath">The relative path of the file to delete (as stored in the database).</param>
     /// <returns>True if deletion was successful or file didn't exist, false otherwise.</returns>
     Task<bool> DeleteFileAsync(string relativePath);
-
-    // TODO: Add methods for getting file streams, etc. later if needed.
 }

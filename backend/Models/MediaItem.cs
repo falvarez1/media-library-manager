@@ -17,7 +17,8 @@ public class MediaItem
     public string Name { get; set; } = string.Empty; // Original filename
 
     public Guid? FolderId { get; set; } // Foreign key to Folder (nullable if root)
-    // TODO: Add Navigation Property for Folder later: public Folder? Folder { get; set; }
+    [ForeignKey("FolderId")]
+    public virtual Folder? Folder { get; set; }
 
     [Required]
     [MaxLength(1024)]

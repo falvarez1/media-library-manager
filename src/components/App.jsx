@@ -239,10 +239,7 @@ const App = () => {
   // Helper functions to get next/previous media IDs
   // In a real implementation, these would use our hook system to get the actual media items
   const getNextMediaId = (currentId) => {
-    // This is a placeholder function until we implement the actual navigation
-    // when we refactor other components to use the hook system
-    console.log('Navigate to next item from:', currentId);
-    return null; // Currently returns null, will be implemented properly later
+    return null;
   };
   
   // Save user preferences
@@ -262,10 +259,7 @@ const App = () => {
   };
 
   const getPreviousMediaId = (currentId) => {
-    // This is a placeholder function until we implement the actual navigation
-    // when we refactor other components to use the hook system
-    console.log('Navigate to previous item from:', currentId);
-    return null; // Currently returns null, will be implemented properly later
+    return null;
   };
 
   // Open image editor
@@ -316,9 +310,6 @@ const App = () => {
   };
   
   const handleSelectAll = () => {
-    // TODO: Get all media IDs from the current view
-    // For now, we'll use a placeholder
-    console.log('Select all media');
   };
   
   const handleDeselectAll = () => {

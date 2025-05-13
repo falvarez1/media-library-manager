@@ -49,8 +49,6 @@ public static class UsersApi
              .Produces(StatusCodes.Status401Unauthorized)
              .ProducesProblem(StatusCodes.Status500InternalServerError);
 
-        // TODO: Add endpoints for GET /users, GET /users/{id}, PUT /users/recent
-
         return group;
     }
 
@@ -119,8 +117,8 @@ public static class UsersApi
              changed = true;
          }
 
-         // TODO: Handle Email update (requires confirmation flow usually)
-         // TODO: Handle other profile fields
+         // Note: Email updates typically require a confirmation flow.
+         // Other profile fields can be added here as needed (e.g., FirstName, LastName).
 
          if (changed)
          {

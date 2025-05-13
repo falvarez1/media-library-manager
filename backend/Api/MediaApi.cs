@@ -49,15 +49,12 @@ public static class MediaApi
              .Produces<NotFound>()
              .ProducesProblem(StatusCodes.Status500InternalServerError);
 
-        // TODO: Add batch operations if needed (batch update, batch delete)
-
         return group;
     }
 
     // Handler for GET /api/media
     public static async Task<Ok<List<MediaItem>>> GetAllMediaItems(AppDbContext db)
     {
-        // TODO: Implement filtering, sorting, pagination based on query parameters
         var mediaItems = await db.MediaItems.AsNoTracking().ToListAsync(); // Use AsNoTracking for read-only queries
         return TypedResults.Ok(mediaItems);
     }
@@ -93,8 +90,6 @@ public static class MediaApi
             });
         }
 
-        // TODO: Add more robust validation (file type, size limits, etc.)
-
         // Manually bind form fields to DTO
         var form = await request.ReadFormAsync();
         var createDto = new CreateMediaItemDto
@@ -109,8 +104,6 @@ public static class MediaApi
             IsFavorited = form.ContainsKey("IsFavorited") && bool.TryParse(form["IsFavorited"], out var isFavorited) && isFavorited,
             Status = form["Status"]
         };
-
-        // TODO: Add validation for manually bound DTO fields if needed
 
         string relativePath;
         try
@@ -134,7 +127,6 @@ public static class MediaApi
             Path = createDto.Path, // Logical path provided by client
             PhysicalPath = relativePath, // Path returned by storage service
             SizeInBytes = file.Length,
-            // TODO: Extract Dimensions/Duration if possible (requires more complex processing)
             CreatedAt = DateTimeOffset.UtcNow,
             ModifiedAt = DateTimeOffset.UtcNow,
             IsUsed = false, // Default
@@ -161,12 +153,37 @@ public static class MediaApi
         catch (DbUpdateException ex)
         {
              logger.LogError(ex, "Failed to save new MediaItem to database for file '{FileName}'", file.FileName);
-             // TODO: Consider deleting the saved file if DB save fails (compensating action)
+             // Attempt to delete the orphaned file
+             try
+             {
+                 if (!string.IsNullOrEmpty(relativePath))
+                 {
+                     await storageService.DeleteFileAsync(relativePath);
+                     logger.LogInformation("Successfully deleted orphaned file '{PhysicalPath}' after DB save failure.", relativePath);
+                 }
+             }
+             catch (Exception deleteEx)
+             {
+                 logger.LogError(deleteEx, "Failed to delete orphaned file '{PhysicalPath}' after DB save failure.", relativePath);
+             }
              return TypedResults.Problem("Failed to save media information.", statusCode: StatusCodes.Status500InternalServerError);
         }
          catch (Exception ex) // Catch unexpected errors
         {
             logger.LogError(ex, "An unexpected error occurred while creating MediaItem for file '{FileName}'", file.FileName);
+            // Attempt to delete the orphaned file here as well if it was saved before this broader exception
+             try
+             {
+                 if (!string.IsNullOrEmpty(relativePath)) // Check if relativePath was assigned
+                 {
+                     await storageService.DeleteFileAsync(relativePath);
+                     logger.LogInformation("Successfully deleted orphaned file '{PhysicalPath}' after unexpected error.", relativePath);
+                 }
+             }
+             catch (Exception deleteEx)
+             {
+                 logger.LogError(deleteEx, "Failed to delete orphaned file '{PhysicalPath}' after unexpected error.", relativePath);
+             }
             return TypedResults.Problem("An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
@@ -198,8 +215,18 @@ public static class MediaApi
         }
         if (updateDto.FolderId.HasValue && existingItem.FolderId != updateDto.FolderId)
         {
-            // TODO: Validate FolderId exists if implementing folders later
-            existingItem.FolderId = updateDto.FolderId;
+            if (updateDto.FolderId.Value != Guid.Empty) // Allow unsetting FolderId by passing null/empty Guid
+            {
+                var folderExists = await db.Folders.AnyAsync(f => f.Id == updateDto.FolderId.Value);
+                if (!folderExists)
+                {
+                    logger.LogWarning("UpdateMediaItem failed: Folder with ID {FolderId} not found.", updateDto.FolderId.Value);
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]> {
+                        { nameof(UpdateMediaItemDto.FolderId), new[] { $"Folder with ID {updateDto.FolderId.Value} not found." } }
+                    });
+                }
+            }
+            existingItem.FolderId = updateDto.FolderId.Value == Guid.Empty ? null : updateDto.FolderId;
             changed = true;
         }
         if (updateDto.Path is not null && existingItem.Path != updateDto.Path)
@@ -243,7 +270,6 @@ public static class MediaApi
         }
         if (updateDto.Status is not null && existingItem.Status != updateDto.Status)
         {
-            // TODO: Add validation for allowed status values
             existingItem.Status = updateDto.Status;
             changed = true;
         }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using backend.Data;
 
@@ -10,9 +11,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250513000032_AddUserToCollection")]
+    partial class AddUserToCollection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -511,12 +514,10 @@ namespace backend.Migrations
 
             modelBuilder.Entity("backend.Models.MediaItem", b =>
                 {
-                    b.HasOne("backend.Models.Folder", "Folder")
+                    b.HasOne("backend.Models.Folder", null)
                         .WithMany("MediaItems")
                         .HasForeignKey("FolderId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Folder");
                 });
 
             modelBuilder.Entity("backend.Models.Folder", b =>

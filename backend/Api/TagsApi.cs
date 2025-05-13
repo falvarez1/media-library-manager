@@ -48,8 +48,6 @@ public static class TagsApi
              .Produces<NotFound>()
              .ProducesProblem(StatusCodes.Status500InternalServerError);
 
-        // TODO: Add endpoints for GetMediaByTag, GetPopularTags
-
         return group;
     }
 
