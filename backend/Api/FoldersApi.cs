@@ -161,7 +161,11 @@ public static class FoldersApi
         // Only update Name for now
         if (existingFolder.Name != updateDto.Name)
         {
-            // Note: Path update logic for descendants is currently deferred.
+            // TODO: Implement logic to update the paths of descendant folders when a folder is renamed.
+            // This should ensure that all child folders inherit the updated path structure to maintain consistency.
+            // For example, if a folder's path changes from "/parent" to "/new-parent", all child folders
+            // should have their paths updated accordingly (e.g., "/parent/child" -> "/new-parent/child").
+            // Consider edge cases such as circular references or concurrent updates.
             logger.LogWarning("Updating folder name only for ID {FolderId}. Path update logic for descendants is deferred.", id);
             existingFolder.Name = updateDto.Name;
             existingFolder.ModifiedAt = DateTimeOffset.UtcNow;
