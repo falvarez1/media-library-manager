@@ -11,6 +11,7 @@
  */
 
 import getConfig from 'next/config';
+import storage from '../utils/storage';
 
 // Get Next.js runtime configuration
 const { publicRuntimeConfig = {} } = getConfig() || {};
@@ -25,12 +26,12 @@ const getConfigValue = (key, runtimeValue, defaultValue) => {
   if (typeof window !== 'undefined') {
     try {
       // Get saved config from localStorage
-      const savedConfig = JSON.parse(localStorage.getItem('dataSourceConfig') || '{}');
+      const savedConfig = storage.get('dataSourceConfig', {});
       if (savedConfig[key] !== undefined) {
         return savedConfig[key];
       }
     } catch (e) {
-      console.error('Error reading from localStorage:', e);
+      // Error reading from localStorage
     }
   }
   
@@ -124,7 +125,7 @@ const config = {
           mockDelayFixed: config.mock.delay.fixed,
           mockErrorRate: config.mock.errorRate
         };
-        localStorage.setItem('dataSourceConfig', JSON.stringify(persistConfig));
+        storage.set('dataSourceConfig', persistConfig);
       } catch (e) {
         console.error('Error saving to localStorage:', e);
       }

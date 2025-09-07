@@ -25,13 +25,12 @@ export const getMedia = async (folderArg = null, options = {}) => {
   let folderValue = null;
   
   // Log initial arguments
-  console.log('[mediaApi] getMedia called with direct folderArg:', folderArg);
-  console.log('[mediaApi] getMedia initial options:', options);
+  // [mediaApi] getMedia called
   
   // Case 1: First arg is direct folder ID (string/number)
   if (folderArg !== null && (typeof folderArg === 'string' || typeof folderArg === 'number')) {
     folderValue = folderArg.toString();
-    console.log('[mediaApi] Using direct folder ID argument:', folderValue);
+    // [mediaApi] Using direct folder ID argument
   }
   // Case 2: First arg is options object
   else if (folderArg !== null && typeof folderArg === 'object') {
@@ -39,13 +38,13 @@ export const getMedia = async (folderArg = null, options = {}) => {
     folderValue = effectiveOptions.folder ?
       (typeof effectiveOptions.folder === 'string' || typeof effectiveOptions.folder === 'number' ?
         effectiveOptions.folder.toString() : null) : null;
-    console.log('[mediaApi] Using folder from options object:', folderValue);
+    // [mediaApi] Using folder from options object
   }
   // Case 3: Second arg (options) contains folder
   else if (options && options.folder) {
     folderValue = typeof options.folder === 'string' || typeof options.folder === 'number' ?
       options.folder.toString() : null;
-    console.log('[mediaApi] Using folder from second arg options:', folderValue);
+    // [mediaApi] Using folder from second arg options
   }
   
   // Extract all other options with defaults
@@ -69,15 +68,15 @@ export const getMedia = async (folderArg = null, options = {}) => {
   // Filter by folder - Enhanced logging
   let filtered = [...mediaItems];
   
-  console.log(`[mediaApi] Final folder value to use:`, folderValue);
+  // [mediaApi] Final folder value to use
   
   // Debug to help diagnose the issue
   if (folderValue === '') {
-    console.log('[mediaApi] WARNING: Empty folder string detected!');
+    // [mediaApi] WARNING: Empty folder string detected!
   }
   
   if (folderValue !== null && folderValue !== undefined && folderValue !== '' && folderValue !== 'all') {
-    console.log(`[mediaApi] Filtering by folder: ${folderValue}`);
+    // [mediaApi] Filtering by folder
     try {
       // Import folders to get the hierarchy
       const foldersModule = await import('../data/folders');
@@ -95,8 +94,7 @@ export const getMedia = async (folderArg = null, options = {}) => {
           return folderParent === parentId;
         });
         
-        console.log(`[mediaApi] Found ${childFolders.length} direct children for folder ${parentId}:`,
-                    childFolders.map(f => `${f.id} (${f.name})`));
+        // [mediaApi] Found direct children for folder
         
         childFolders.forEach(child => {
           const childId = child.id !== null && child.id !== undefined ? child.id.toString() : null;
@@ -110,11 +108,10 @@ export const getMedia = async (folderArg = null, options = {}) => {
       // Find all child folders - use the string value consistently
       findChildFolders(folderValue);
       
-      console.log(`[mediaApi] Filtering media for folder ${folderValue} and children:`, folderIds);
+      // [mediaApi] Filtering media for folder and children
       
       // Debug output each media item's folder
-      console.log(`[mediaApi] Media items before filtering:`,
-                  mediaItems.map(item => ({ id: item.id, name: item.name, folder: item.folder })));
+      // [mediaApi] Media items before filtering
       
       // Filter media by any folder in the hierarchy
       filtered = filtered.filter(item => {
@@ -124,24 +121,19 @@ export const getMedia = async (folderArg = null, options = {}) => {
         
         // More verbose logging to debug the issue
         if (folderIds.length < 10) {  // Only log for reasonable number of folders
-          console.log(`[mediaApi] Media item ${item.id} (${item.name}) in folder ${itemFolder}, match=${isInFolder}`);
-          console.log(`[mediaApi] FolderIds includes check:`, {
-            itemFolder,
-            folderIds,
-            includes: folderIds.includes(itemFolder)
-          });
+          // [mediaApi] Media item folder check
         }
         
         return isInFolder;
       });
-      console.log(`[mediaApi] Found ${filtered.length} media items in folder(s)`, folderIds);
+      // [mediaApi] Found media items in folder(s)
     } catch (error) {
-      console.error('[mediaApi] Error filtering by folder:', error);
+      // [mediaApi] Error filtering by folder
       // If there's an error, just filter by the exact folder ID
       filtered = filtered.filter(item => item.folder === folder);
     }
   } else {
-    console.log('[mediaApi] No specific folder filtering applied - showing all media');
+    // [mediaApi] No specific folder filtering applied - showing all media
   }
   
   // Filter by collection
@@ -156,7 +148,7 @@ export const getMedia = async (folderArg = null, options = {}) => {
       
       filtered = filtered.filter(item => collectionItems.includes(item.id));
     } catch (error) {
-      console.error('Error filtering by collection:', error);
+      // Error filtering by collection
     }
   }
   

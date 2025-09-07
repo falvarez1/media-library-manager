@@ -16,7 +16,7 @@ function isPortAvailable(port) {
 }
 
 // Function to find an available port
-async function findAvailablePort(startPort = 3000, maxPort = 3100) {
+async function findAvailablePort(startPort = 3010, maxPort = 3100) {
   for (let port = startPort; port <= maxPort; port++) {
     const available = await isPortAvailable(port);
     if (available) {

@@ -2,6 +2,7 @@
  * API utility functions for real API implementation
  */
 import config from '../config';
+import storage from '../../utils/storage';
 
 /**
  * Handles HTTP response
@@ -39,7 +40,7 @@ export const createRequestOptions = (method, body = null) => {
   };
   
   // Add authentication token if available
-  const token = localStorage.getItem('auth_token');
+  const token = storage.get('auth_token', null);
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
   }
