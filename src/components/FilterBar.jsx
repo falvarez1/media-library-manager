@@ -1,5 +1,5 @@
 import { X, ChevronDown, Loader } from 'lucide-react';
-import { useTags } from '../hooks/useMockApi';
+import { useTags } from '../hooks/useApi';
 
 const FilterBar = ({ 
   filters, 

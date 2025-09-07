@@ -75,6 +75,62 @@ export const getPopularTags = async (options = {}) => {
   return apiRequest(`/tags/popular${queryString}`);
 };
 
+/**
+ * Get tag categories
+ * @returns {Promise} - Promise resolving to tag categories
+ */
+export const getTagCategories = async () => {
+  return apiRequest('/tags/categories');
+};
+
+/**
+ * Create a new tag category
+ * @param {Object} categoryData - Tag category data
+ * @returns {Promise} - Promise resolving to created tag category
+ */
+export const createTagCategory = async (categoryData) => {
+  return apiRequest('/tags/categories', 'POST', categoryData);
+};
+
+/**
+ * Update a tag category
+ * @param {string} id - Tag category ID
+ * @param {Object} updates - Fields to update
+ * @returns {Promise} - Promise resolving to updated tag category
+ */
+export const updateTagCategory = async (id, updates) => {
+  return apiRequest(`/tags/categories/${id}`, 'PUT', updates);
+};
+
+/**
+ * Delete a tag category
+ * @param {string} id - Tag category ID
+ * @returns {Promise} - Promise resolving to success message
+ */
+export const deleteTagCategory = async (id) => {
+  return apiRequest(`/tags/categories/${id}`, 'DELETE');
+};
+
+/**
+ * Get tag suggestions based on query
+ * @param {Object} options - Query options including query string
+ * @returns {Promise} - Promise resolving to tag suggestions
+ */
+export const getTagSuggestions = async (options = {}) => {
+  const queryString = buildQueryString(options);
+  return apiRequest(`/tags/suggestions${queryString}`);
+};
+
+/**
+ * Batch update tags for multiple media items
+ * @param {Array} mediaIds - Array of media item IDs
+ * @param {Object} updates - Tag updates to apply
+ * @returns {Promise} - Promise resolving to updated media items
+ */
+export const batchUpdateTags = async (mediaIds, updates) => {
+  return apiRequest('/tags/batch', 'POST', { mediaIds, updates });
+};
+
 // Export all tag API functions
 export default {
   getTags,
@@ -83,5 +139,11 @@ export default {
   createTag,
   updateTag,
   deleteTag,
-  getPopularTags
+  getPopularTags,
+  getTagCategories,
+  createTagCategory,
+  updateTagCategory,
+  deleteTagCategory,
+  getTagSuggestions,
+  batchUpdateTags
 };
