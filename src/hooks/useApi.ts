@@ -5,7 +5,7 @@
  * handling loading states, errors, and API responses with full TypeScript support.
  */
 
-import { useState, useEffect, useCallback, DependencyList } from 'react';
+import { useState, useEffect, useCallback, useMemo, DependencyList } from 'react';
 import api from '../services';
 import config from '../services/config';
 
@@ -221,7 +221,7 @@ export const useMediaItem = (
   
   return useApi<MediaItem>(
     executeApi,
-    [id, ...deps],
+    [id, ...(deps || [])],
     null
   );
 };
@@ -365,14 +365,20 @@ export const useDeleteFolder = (): UseMutationReturn<{ success: boolean }, { id:
 export const useFolderContents = (
   id: FolderId, 
   options: any = {}, 
-  deps: DependencyList = []
+  deps?: DependencyList
 ): UseApiReturn<any | null> => {
+  // Ensure deps is always an array
+  const safeDeps = Array.isArray(deps) ? deps : [];
+  
+  // Create a stable options key for dependency tracking
+  const optionsKey = useMemo(() => JSON.stringify(options || {}), [JSON.stringify(options || {})]);
+  
   const executeApi = useCallback((): Promise<ApiResponse<any>> => 
-    api.folders.getFolderContents(id, options), [id, options]);
+    api.folders.getFolderContents(id, options), [id, optionsKey]);
     
   return useApi<any>(
     executeApi, 
-    [id, ...deps]
+    [id, optionsKey, ...safeDeps]
   );
 };
 

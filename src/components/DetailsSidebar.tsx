@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag } from 'lucide-react';
 import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags } from '../hooks/useApi';
+import { useNavigation, useUIState, useMediaOperations } from '../contexts';
 import TagSelector from './TagSelector';
 import CollectionModal from './CollectionModal';
 import {
@@ -20,25 +21,19 @@ interface Comment {
   timestamp: string;
 }
 
-// Details sidebar props interface
-interface DetailsSidebarProps {
-  mediaId: MediaId;
-  onClose: () => void;
-  onOpenEditor?: () => void;
-  onToggleStar?: (mediaId: MediaId) => void;
-  onToggleFavorite?: (mediaId: MediaId) => void;
-}
-
 // Details tab type
 type DetailsTab = 'info' | 'metadata' | 'usage' | 'comments';
 
-const DetailsSidebar: React.FC<DetailsSidebarProps> = ({ 
-  mediaId, 
-  onClose, 
-  onOpenEditor,
-  onToggleStar,
-  onToggleFavorite
-}) => {
+const DetailsSidebar: React.FC = () => {
+  const { selectedMedia } = useNavigation();
+  const { detailsVisible, setDetailsVisible } = useUIState();
+  const { toggleStar, toggleFavorite, openEditor } = useMediaOperations();
+  
+  if (!selectedMedia || !detailsVisible) {
+    return null;
+  }
+  
+  const mediaId = selectedMedia;
   // Fetch media item by ID using our hook
   const { data: item, loading: itemLoading, error: itemError, refetch: refetchMediaItem } = useMediaItem(mediaId);
   
@@ -97,12 +92,22 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   
   // Handle star toggle
   const handleToggleStar = (): void => {
-    if (onToggleStar) onToggleStar(mediaId);
+    toggleStar(mediaId);
   };
   
   // Handle favorite toggle
   const handleToggleFavorite = (): void => {
-    if (onToggleFavorite) onToggleFavorite(mediaId);
+    toggleFavorite(mediaId);
+  };
+  
+  // Handle editor open
+  const handleOpenEditor = (): void => {
+    openEditor(mediaId);
+  };
+  
+  // Handle close
+  const handleClose = (): void => {
+    setDetailsVisible(false);
   };
   
   // Handle tag updates
@@ -183,7 +188,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
       <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
         <div className="border-b border-gray-200 p-4 flex justify-between items-center">
           <h3 className="font-medium">Details</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
@@ -221,7 +226,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
             <History size={18} />
           </button>
           <button 
-            onClick={onClose} 
+            onClick={handleClose} 
             className="text-gray-400 hover:text-gray-600"
           >
             <X size={18} />
@@ -267,7 +272,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
                     className="p-2 bg-white rounded-full shadow-lg"
-                    onClick={onOpenEditor}
+                    onClick={handleOpenEditor}
                   >
                     <Edit size={18} />
                   </button>
@@ -507,7 +512,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
               <div className="pt-4 flex space-x-2">
                 <button 
                   className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600"
-                  onClick={onOpenEditor}
+                  onClick={handleOpenEditor}
                 >
                   {item.type === 'image' ? 'Edit Image' : 'Edit'}
                 </button>

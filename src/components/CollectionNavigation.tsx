@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Folder, Plus, Pencil, Trash2, Share } from 'lucide-react';
 import { useCollections, useCreateCollection, useUpdateCollection, useDeleteCollection } from '../hooks/useApi';
+import { useNavigation, useMediaOperations } from '../contexts';
 import CollectionModal from './CollectionModal';
 import ConfirmationDialog from './ConfirmationDialog';
 import {
@@ -19,26 +20,13 @@ interface CollectionFormData {
   parentId: CollectionId | null;
 }
 
-// Component props interface
-interface CollectionNavigationProps {
-  collections?: Collection[];
-  currentCollection: CollectionId | null;
-  onCollectionClick?: (collectionId: CollectionId) => void;
-  onCreateCollection?: (collectionData: Partial<Collection>) => void;
-  onUpdateCollection?: (collectionId: CollectionId, collectionData: Partial<Collection>) => void;
-  onDeleteCollection?: (collectionId: CollectionId) => void;
-  editable?: boolean;
-}
-
-const CollectionNavigation: React.FC<CollectionNavigationProps> = ({ 
-  collections = [], 
-  currentCollection,
-  onCollectionClick,
-  onCreateCollection,
-  onUpdateCollection,
-  onDeleteCollection,
-  editable = true
-}) => {
+const CollectionNavigation: React.FC = () => {
+  const { currentCollection, navigateToCollection } = useNavigation();
+  const { createCollection, updateCollection, deleteCollection } = useMediaOperations();
+  
+  // Get collections from API
+  const { data: collectionsData, loading: collectionsLoading } = useCollections();
+  const collections = collectionsData?.items || [];
   const [expandedCollections, setExpandedCollections] = useState<CollectionId[]>([]);
   const [showNewCollectionModal, setShowNewCollectionModal] = useState<boolean>(false);
   const [showEditCollectionModal, setShowEditCollectionModal] = useState<boolean>(false);
@@ -47,7 +35,9 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
   const [parentIdForNew, setParentIdForNew] = useState<CollectionId | null>(null);
 
   // Get root collections (those with no parent)
-  const rootCollections = collections.filter(collection => !collection.parentId);
+  const rootCollections = Array.isArray(collections) 
+    ? collections.filter(collection => !collection.parentId)
+    : [];
 
   // Toggle collection expansion
   const toggleCollection = (collectionId: CollectionId): void => {
@@ -60,14 +50,12 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
 
   // Handle collection click
   const handleCollectionClick = (collectionId: CollectionId): void => {
-    if (onCollectionClick) {
-      onCollectionClick(collectionId);
-    }
+    navigateToCollection(collectionId);
   };
 
   // Create new collection
-  const handleCreateCollection = (collectionData: CollectionFormData): void => {
-    if (onCreateCollection) {
+  const handleCreateCollection = async (collectionData: CollectionFormData): Promise<void> => {
+    try {
       const dataForApi: Partial<Collection> = {
         name: collectionData.name,
         description: collectionData.description,
@@ -75,15 +63,19 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
         isShared: collectionData.isShared,
         parentId: collectionData.parentId || parentIdForNew
       };
-      onCreateCollection(dataForApi);
+      await createCollection(dataForApi);
+      setShowNewCollectionModal(false);
+      setParentIdForNew(null);
+    } catch (error) {
+      console.error('Failed to create collection:', error);
     }
-    setShowNewCollectionModal(false);
-    setParentIdForNew(null);
   };
 
   // Update collection
-  const handleUpdateCollection = (collectionData: CollectionFormData): void => {
-    if (onUpdateCollection && selectedCollectionId) {
+  const handleUpdateCollection = async (collectionData: CollectionFormData): Promise<void> => {
+    if (!selectedCollectionId) return;
+    
+    try {
       const dataForApi: Partial<Collection> = {
         name: collectionData.name,
         description: collectionData.description,
@@ -91,19 +83,25 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
         isShared: collectionData.isShared,
         parentId: collectionData.parentId
       };
-      onUpdateCollection(selectedCollectionId, dataForApi);
+      await updateCollection(selectedCollectionId, dataForApi);
+      setShowEditCollectionModal(false);
+      setSelectedCollectionId(null);
+    } catch (error) {
+      console.error('Failed to update collection:', error);
     }
-    setShowEditCollectionModal(false);
-    setSelectedCollectionId(null);
   };
 
   // Delete collection
-  const handleDeleteCollection = (): void => {
-    if (onDeleteCollection && selectedCollectionId) {
-      onDeleteCollection(selectedCollectionId);
+  const handleDeleteCollection = async (): Promise<void> => {
+    if (!selectedCollectionId) return;
+    
+    try {
+      await deleteCollection(selectedCollectionId);
+      setShowDeleteConfirmation(false);
+      setSelectedCollectionId(null);
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
     }
-    setShowDeleteConfirmation(false);
-    setSelectedCollectionId(null);
   };
 
   // Open new collection modal
@@ -131,7 +129,9 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
 
   // Render collection items recursively
   const renderCollectionItems = (parentId: CollectionId | null = null, level: number = 0): React.JSX.Element | null => {
-    const filteredCollections = collections.filter(collection => collection.parentId === parentId);
+    const filteredCollections = Array.isArray(collections) 
+      ? collections.filter(collection => collection.parentId === parentId)
+      : [];
 
     if (filteredCollections.length === 0) {
       return null;
@@ -169,33 +169,31 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
                   <span className="ml-1 text-xs text-gray-500">({collection.items?.length || 0})</span>
                 </div>
                 
-                {editable && (
-                  <div className="flex items-center space-x-1">
-                    <button 
-                      className="p-1 text-gray-400 hover:text-blue-600"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        openEditCollectionModal(collection.id);
-                      }}
-                      aria-label="Edit collection"
-                    >
-                      <Pencil size={12} />
-                    </button>
-                    <button 
-                      className="p-1 text-gray-400 hover:text-red-600"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        openDeleteConfirmation(collection.id);
-                      }}
-                      aria-label="Delete collection"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                    {collection.isShared && (
-                      <Share size={12} className="text-blue-500" aria-label="Shared collection" />
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center space-x-1">
+                  <button 
+                    className="p-1 text-gray-400 hover:text-blue-600"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      openEditCollectionModal(collection.id);
+                    }}
+                    aria-label="Edit collection"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button 
+                    className="p-1 text-gray-400 hover:text-red-600"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      openDeleteConfirmation(collection.id);
+                    }}
+                    aria-label="Delete collection"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  {collection.isShared && (
+                    <Share size={12} className="text-blue-500" aria-label="Shared collection" />
+                  )}
+                </div>
               </div>
               
               {isExpanded && hasChildren && renderCollectionItems(collection.id, level + 1)}
@@ -211,15 +209,13 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
       {/* Collections header with add button */}
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collections</h3>
-        {editable && (
-          <button
-            className="text-xs text-gray-500 hover:text-gray-700"
-            onClick={() => openNewCollectionModal()}
-            aria-label="Create new collection"
-          >
-            <Plus size={14} />
-          </button>
-        )}
+        <button
+          className="text-xs text-gray-500 hover:text-gray-700"
+          onClick={() => openNewCollectionModal()}
+          aria-label="Create new collection"
+        >
+          <Plus size={14} />
+        </button>
       </div>
       
       {/* Collection tree */}
@@ -232,15 +228,13 @@ const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
       )}
       
       {/* Create new collection button at bottom */}
-      {editable && (
-        <button 
-          className="mt-2 w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center"
-          onClick={() => openNewCollectionModal()}
-        >
-          <Plus size={14} className="mr-1" />
-          <span>New Collection</span>
-        </button>
-      )}
+      <button 
+        className="mt-2 w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center"
+        onClick={() => openNewCollectionModal()}
+      >
+        <Plus size={14} className="mr-1" />
+        <span>New Collection</span>
+      </button>
       
       {/* Modals */}
       <CollectionModal

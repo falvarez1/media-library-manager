@@ -1,28 +1,21 @@
 import React from 'react';
 import { X, ChevronDown, Loader } from 'lucide-react';
 import { useTags } from '../hooks/useApi';
+import { useFilter } from '../contexts';
 import {
-  MediaFilterOptions,
   MediaType,
   TagId,
   Status,
   ChangeEvent
 } from '../types';
 
-// Filter bar props interface
-interface FilterBarProps {
-  filters: MediaFilterOptions;
-  setFilters: (filters: MediaFilterOptions) => void;
-  setFilterActive: (active: boolean) => void;
-  onClose: () => void;
-}
-
-const FilterBar: React.FC<FilterBarProps> = ({ 
-  filters, 
-  setFilters, 
-  setFilterActive,
-  onClose
-}) => {
+const FilterBar: React.FC = () => {
+  const { 
+    filters, 
+    setFilters, 
+    setFilterActive, 
+    toggleFilterPanel 
+  } = useFilter();
   // Fetch tags data using our hook system
   const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
@@ -236,7 +229,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           </button>
           <button 
             className="text-xs text-gray-500 hover:text-gray-700"
-            onClick={onClose}
+            onClick={toggleFilterPanel}
           >
             <X size={16} />
           </button>

@@ -106,7 +106,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   
   // Initialize move operation
   const handleMoveClick = (): void => {
-    if (selectedMedia.length === 0) {
+    if (!selectedMedia || selectedMedia.length === 0) {
       showOperationMessage('Please select media items to move');
       return;
     }
@@ -116,7 +116,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   
   // Initialize copy operation
   const handleCopyClick = (): void => {
-    if (selectedMedia.length === 0) {
+    if (!selectedMedia || selectedMedia.length === 0) {
       showOperationMessage('Please select media items to copy');
       return;
     }
@@ -142,10 +142,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
         showOperationMessage(`${selectedMedia.length} item(s) copied successfully`);
       }
       
-      // Notify parent component that operation is complete
-      if (onOperationComplete && operationType) {
-        onOperationComplete(operationType, selectedMedia, folderId);
-      }
+      // Operation completed successfully - context will handle state updates
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to perform operation';
       showOperationMessage(`Error: ${errorMessage}`);
@@ -154,7 +151,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   
   // Handle export operation
   const handleExport = async (): Promise<void> => {
-    if (selectedMedia.length === 0) {
+    if (!selectedMedia || selectedMedia.length === 0) {
       showOperationMessage('Please select media items to export');
       return;
     }
@@ -168,9 +165,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
         }
       });
       
-      if (onExportComplete) {
-        onExportComplete(result);
-      }
+      // Export completed successfully
       
       showOperationMessage('Export complete. Download started.');
     } catch (error) {
@@ -181,7 +176,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   
   // Handle share operation
   const handleShare = async (): Promise<void> => {
-    if (selectedMedia.length === 0) {
+    if (!selectedMedia || selectedMedia.length === 0) {
       showOperationMessage('Please select media items to share');
       return;
     }
@@ -195,9 +190,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
         }
       });
       
-      if (onShareComplete) {
-        onShareComplete(result);
-      }
+      // Share completed successfully
       
       showOperationMessage('Share link created and copied to clipboard');
     } catch (error) {
@@ -273,7 +266,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
             <span className="text-xs mr-1">Select</span>
           </button>
           
-          {selectedMedia.length > 0 && (
+          {selectedMedia && selectedMedia.length > 0 && (
             <span className="text-sm text-gray-500">
               {selectedMedia.length} selected
             </span>
@@ -283,13 +276,13 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
             <div className="flex space-x-1">
               <button
                 className="p-1.5 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
-                onClick={onSelectAll}
+                onClick={selectAll}
               >
                 Select All
               </button>
               <button
                 className="p-1.5 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
-                onClick={onDeselectAll}
+                onClick={deselectAll}
               >
                 Deselect All
               </button>
@@ -298,7 +291,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
         </div>
         
         {/* Middle - File operations */}
-        {selectedMedia.length > 0 && (
+        {selectedMedia && selectedMedia.length > 0 && (
           <div className="flex items-center space-x-2">
             <button
               className="p-1.5 border border-gray-300 rounded-md flex items-center text-gray-700 hover:bg-gray-50"

@@ -6,29 +6,19 @@ import {
   ChevronUp, ChevronDown, Loader, SkipBack, SkipForward
 } from 'lucide-react';
 import { useMediaItem } from '../hooks/useApi';
+import { useNavigation, useUIState, useMediaOperations } from '../contexts';
 import type { MediaId, MediaItem } from '../types';
 
-interface MediaViewerProps {
-  mediaId: MediaId;
-  onClose: () => void;
-  onShowDetails?: () => void;
-  onOpenEditor?: () => void;
-  onToggleStar?: (mediaId: MediaId) => void;
-  onToggleFavorite?: (mediaId: MediaId) => void;
-  onNavigateNext?: (mediaId: MediaId) => void;
-  onNavigatePrevious?: (mediaId: MediaId) => void;
-}
-
-const MediaViewer: React.FC<MediaViewerProps> = ({
-  mediaId,
-  onClose,
-  onShowDetails,
-  onOpenEditor,
-  onToggleStar,
-  onToggleFavorite,
-  onNavigateNext,
-  onNavigatePrevious
-}) => {
+const MediaViewer: React.FC = () => {
+  const { currentMedia, navigateNext, navigatePrevious } = useNavigation();
+  const { quickViewVisible, setQuickViewVisible, setDetailsVisible } = useUIState();
+  const { toggleStar, toggleFavorite, openEditor } = useMediaOperations();
+  
+  if (!currentMedia || !quickViewVisible) {
+    return null;
+  }
+  
+  const mediaId = currentMedia;
   // Fetch media item data
   const { data: item, loading, error } = useMediaItem(mediaId);
   
@@ -55,26 +45,37 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   
   // Handle star toggle
   const handleToggleStar = (): void => {
-    if (onToggleStar) onToggleStar(mediaId);
+    toggleStar(mediaId);
   };
   
   // Handle favorite toggle
   const handleToggleFavorite = (): void => {
-    if (onToggleFavorite) onToggleFavorite(mediaId);
+    toggleFavorite(mediaId);
+  };
+  
+  // Handle editor open
+  const handleOpenEditor = (): void => {
+    openEditor(mediaId);
+  };
+  
+  // Handle close
+  const handleClose = (): void => {
+    setQuickViewVisible(false);
+  };
+  
+  // Handle show details
+  const handleShowDetails = (): void => {
+    setDetailsVisible(true);
   };
   
   // Navigate to previous item
   const goToPrevious = (): void => {
-    if (onNavigatePrevious) {
-      onNavigatePrevious(mediaId);
-    }
+    navigatePrevious();
   };
   
   // Navigate to next item
   const goToNext = (): void => {
-    if (onNavigateNext) {
-      onNavigateNext(mediaId);
-    }
+    navigateNext();
   };
   
   // Reset zoom and position
@@ -146,7 +147,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       
       switch (e.key) {
         case 'Escape':
-          onClose();
+          handleClose();
           break;
         case 'ArrowLeft':
           goToPrevious();
@@ -356,34 +357,30 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
           <div className="flex items-center space-x-3">
             <div className="flex space-x-1">
               <button
-                className={`p-1.5 text-white/80 hover:text-white rounded ${!onNavigatePrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="p-1.5 text-white/80 hover:text-white rounded"
                 onClick={goToPrevious}
-                disabled={!onNavigatePrevious}
                 title="Previous (Left Arrow)"
               >
                 <ArrowLeft size={20} />
               </button>
               <button
-                className={`p-1.5 text-white/80 hover:text-white rounded ${!onNavigateNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="p-1.5 text-white/80 hover:text-white rounded"
                 onClick={goToNext}
-                disabled={!onNavigateNext}
                 title="Next (Right Arrow)"
               >
                 <ArrowRight size={20} />
               </button>
             </div>
-            {onShowDetails && (
-              <button 
-                className="p-1.5 text-white/80 hover:text-white rounded"
-                onClick={onShowDetails}
-                title="Show details (i)"
-              >
-                <Info size={20} />
-              </button>
-            )}
             <button 
               className="p-1.5 text-white/80 hover:text-white rounded"
-              onClick={onClose}
+              onClick={handleShowDetails}
+              title="Show details (i)"
+            >
+              <Info size={20} />
+            </button>
+            <button 
+              className="p-1.5 text-white/80 hover:text-white rounded"
+              onClick={handleClose}
               title="Close (Esc)"
             >
               <X size={20} />
@@ -641,10 +638,10 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         {/* Footer actions */}
         <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center z-10">
           <div className="flex space-x-2">
-            {item.type === 'image' && onOpenEditor && (
+            {item.type === 'image' && (
               <button 
                 className="p-2 bg-black/50 backdrop-blur-sm text-white rounded-full hover:bg-black/60"
-                onClick={onOpenEditor}
+                onClick={handleOpenEditor}
                 title="Edit image"
               >
                 <Edit size={18} />

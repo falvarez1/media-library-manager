@@ -3,6 +3,7 @@ import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, Arro
 import MediaItem from './MediaItem';
 import { useMedia, useFolders, useCollections, useAddItemsToCollection, useFolderContents } from '../hooks/useApi';
 import TagSelector from './TagSelector';
+import { useNavigation, useFilter, useUIState } from '../contexts';
 import {
   MediaId,
   FolderId,
@@ -25,18 +26,8 @@ import type {
 // ============================================================================
 
 interface MediaContentProps {
-  currentView: 'folder' | 'collection' | 'search' | 'starred' | 'favorites' | 'shared' | 'recent';
-  currentFolder: FolderId | 'all' | null;
-  currentCollection: CollectionId | null;
-  searchTerm: string;
-  filters: FilterOptions;
-  filterActive: boolean;
-  selectedMedia?: MediaId[];
-  onSelect: (selected: MediaId[]) => void;
   onQuickView: (mediaId: MediaId) => void;
   onOpenEditor: (mediaId: MediaId) => void;
-  onFolderClick: (folderId: FolderId) => void;
-  onCollectionClick: (collectionId: CollectionId) => void;
   collections?: Collection[];
   tags?: any[];
   onUpdateCollection?: (collectionId: CollectionId, updates: Partial<Collection>) => void;
@@ -70,29 +61,43 @@ interface FolderTreeItemProps {
 // ============================================================================
 
 const MediaContent: React.FC<MediaContentProps> = ({
-  currentView,
-  currentFolder,
-  currentCollection,
-  searchTerm,
-  filters,
-  filterActive,
-  selectedMedia = [],
-  onSelect,
   onQuickView,
   onOpenEditor,
-  onFolderClick,
-  onCollectionClick,
   collections = [],
   tags = [],
   onUpdateCollection,
   onAddToCollection
 }) => {
-  // UI state
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [gridSize, setGridSize] = useState<GridSize>('medium');
+  // Get values from contexts
+  const {
+    currentView,
+    currentFolder,
+    currentCollection,
+    searchTerm,
+    selectedMedia,
+    selectMultipleMedia: onSelect,
+    navigateToFolder: onFolderClick,
+    navigateToCollection: onCollectionClick
+  } = useNavigation();
+  
+  const {
+    filters,
+    filterActive,
+    sortBy,
+    sortOrder,
+    setSortBy,
+    setSortOrder,
+    toggleSortOrder
+  } = useFilter();
+  
+  const {
+    viewMode,
+    gridSize,
+    setViewMode,
+    setGridSize
+  } = useUIState();
+  // Local UI state
   const [mediaSelectionMode, setMediaSelectionMode] = useState<boolean>(false);
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [draggedItem, setDraggedItem] = useState<MediaId | MediaId[] | null>(null);
   const [hoveredCollection, setHoveredCollection] = useState<CollectionId | null>(null);
   const [showCollectionBar, setShowCollectionBar] = useState<boolean>(false);
@@ -569,7 +574,7 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
               
               <button
                 className="border border-gray-300 rounded-md p-1.5 text-gray-500"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                onClick={toggleSortOrder}
               >
                 {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
               </button>

@@ -24,17 +24,10 @@ import {
   HexColor,
   MouseEvent
 } from '../types';
+import { useNavigation, useUIState } from '../contexts';
 
-// Component props interface
+// Component props interface - now simplified since most props come from context
 interface FolderNavigationProps {
-  currentFolder: FolderId | null;
-  currentView: ViewMode | string;
-  currentCollection: CollectionId | null;
-  sidebarTab?: 'files' | 'collections' | 'tags';
-  setSidebarTab: (tab: 'files' | 'collections' | 'tags') => void;
-  onFolderClick: (folderId: FolderId | string) => void;
-  onCollectionClick: (collectionId: CollectionId) => void;
-  onViewChange: (view: ViewMode | string) => void;
   onTagFilter?: (tags: string[]) => void;
 }
 
@@ -66,16 +59,22 @@ interface FolderItemProps {
 }
 
 const FolderNavigation: React.FC<FolderNavigationProps> = ({
-  currentFolder,
-  currentView,
-  currentCollection,
-  sidebarTab = 'files',
-  setSidebarTab,
-  onFolderClick,
-  onCollectionClick,
-  onViewChange,
   onTagFilter
 }) => {
+  // Context hooks
+  const {
+    currentFolder,
+    currentView, 
+    currentCollection,
+    navigateToFolder,
+    navigateToCollection,
+    setCurrentView
+  } = useNavigation();
+  
+  const {
+    sidebarTab,
+    setSidebarTab
+  } = useUIState();
   // Core state
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['1', '2', '3']); // Default expanded folders
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -134,7 +133,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   
   // Set view and folder
   const handleSmartFolderClick = (view: ViewMode | string): void => {
-    onViewChange(view);
+    setCurrentView(view as ViewMode);
   };
   
   // Render loading state
@@ -483,8 +482,8 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
                   currentView === 'folder' && currentFolder === 'all' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => {
-                  onViewChange('folder');
-                  onFolderClick('all');
+                  setCurrentView('folder');
+                  navigateToFolder('all');
                 }}
               >
                 <Folders size={16} />
@@ -554,7 +553,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
                     currentView={currentView}
                     level={0}
                     onToggle={toggleFolder}
-                    onClick={onFolderClick}
+                    onClick={navigateToFolder}
                     handleContextMenu={handleContextMenu}
                     handleDragStart={handleDragStart}
                     handleDragOver={handleDragOver}
@@ -581,7 +580,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
               <CollectionNavigation
                 collections={collections?.items || []}
                 currentCollection={currentCollection}
-                onCollectionClick={onCollectionClick}
+                onCollectionClick={navigateToCollection}
                 onCreateCollection={handleCreateCollection}
                 onUpdateCollection={handleUpdateCollection}
                 onDeleteCollection={handleDeleteCollection}

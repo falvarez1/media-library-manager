@@ -518,7 +518,7 @@ const App: React.FC = () => {
         <div className="flex items-center">
           <button 
             className="p-1.5 mr-3 text-gray-500 hover:text-gray-700 md:hidden"
-            onClick={() => setShowSidebar(!showSidebar)}
+            onClick={() => uiState.toggleSidebar()}
           >
             <Menu size={20} />
           </button>
@@ -664,14 +664,6 @@ const App: React.FC = () => {
         {/* Left sidebar */}
         {showSidebar && (
           <FolderNavigation 
-            currentFolder={currentFolder as FolderId}
-            currentView={currentView}
-            currentCollection={currentCollection}
-            sidebarTab={sidebarTab}
-            setSidebarTab={setSidebarTab}
-            onFolderClick={handleFolderClick}
-            onCollectionClick={handleCollectionClick}
-            onViewChange={(view) => setCurrentView(view as 'folder' | 'collection' | 'search')}
             onTagFilter={handleTagFilter}
           />
         )}

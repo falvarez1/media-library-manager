@@ -1,5 +1,6 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { AppProviders } from '../contexts';
 
 // Use dynamic import with SSR disabled to prevent hydration errors
 // with Lucide icons and other client-side only dependencies
@@ -8,7 +9,9 @@ const App = dynamic(() => import('../components/App'), { ssr: false });
 export default function Home() {
   return (
     <>
-      <App />
+      <AppProviders>
+        <App />
+      </AppProviders>
       {process.env.NODE_ENV === 'development' && (
         <div
           style={{
