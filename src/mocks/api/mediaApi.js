@@ -16,35 +16,21 @@ let mediaItems = JSON.parse(JSON.stringify(media));
  * @param {Object} options - Query options
  * @returns {Promise} - Promise resolving to paginated media items
  */
-export const getMedia = async (folderArg = null, options = {}) => {
+export const getMedia = async (options = {}) => {
   await delay();
   simulateRandomFailure(0.03, 'Failed to fetch media items', 503, 'service_unavailable');
   
-  // Simplified folder parameter handling
-  let effectiveOptions = options;
+  // Extract folder from options
   let folderValue = null;
   
   // Log initial arguments
-  // [mediaApi] getMedia called
+  console.log('[mediaApi] getMedia called with options:', options);
   
-  // Case 1: First arg is direct folder ID (string/number)
-  if (folderArg !== null && (typeof folderArg === 'string' || typeof folderArg === 'number')) {
-    folderValue = folderArg.toString();
-    // [mediaApi] Using direct folder ID argument
-  }
-  // Case 2: First arg is options object
-  else if (folderArg !== null && typeof folderArg === 'object') {
-    effectiveOptions = folderArg;
-    folderValue = effectiveOptions.folder ?
-      (typeof effectiveOptions.folder === 'string' || typeof effectiveOptions.folder === 'number' ?
-        effectiveOptions.folder.toString() : null) : null;
-    // [mediaApi] Using folder from options object
-  }
-  // Case 3: Second arg (options) contains folder
-  else if (options && options.folder) {
+  // Extract folder from options if present
+  if (options && options.folder) {
     folderValue = typeof options.folder === 'string' || typeof options.folder === 'number' ?
       options.folder.toString() : null;
-    // [mediaApi] Using folder from second arg options
+    console.log('[mediaApi] Using folder from options:', folderValue);
   }
   
   // Extract all other options with defaults
@@ -63,20 +49,20 @@ export const getMedia = async (folderArg = null, options = {}) => {
     dateTo = null,
     starred = null,
     favorited = null
-  } = effectiveOptions;
+  } = options;
   
   // Filter by folder - Enhanced logging
   let filtered = [...mediaItems];
   
-  // [mediaApi] Final folder value to use
+  console.log('[mediaApi] Final folder value to use:', folderValue);
   
   // Debug to help diagnose the issue
   if (folderValue === '') {
-    // [mediaApi] WARNING: Empty folder string detected!
+    console.log('[mediaApi] WARNING: Empty folder string detected!');
   }
   
   if (folderValue !== null && folderValue !== undefined && folderValue !== '' && folderValue !== 'all') {
-    // [mediaApi] Filtering by folder
+    console.log('[mediaApi] Filtering by folder:', folderValue);
     try {
       // Import folders to get the hierarchy
       const foldersModule = await import('../data/folders');
@@ -108,10 +94,12 @@ export const getMedia = async (folderArg = null, options = {}) => {
       // Find all child folders - use the string value consistently
       findChildFolders(folderValue);
       
-      // [mediaApi] Filtering media for folder and children
+      console.log('[mediaApi] Filtering media for folder and children:', folderIds);
       
-      // Debug output each media item's folder
-      // [mediaApi] Media items before filtering
+      // Debug output first few media items
+      console.log('[mediaApi] Sample media items before filtering:', 
+        mediaItems.slice(0, 3).map(item => ({ id: item.id, folder: item.folder, name: item.name }))
+      );
       
       // Filter media by any folder in the hierarchy
       filtered = filtered.filter(item => {
@@ -120,20 +108,24 @@ export const getMedia = async (folderArg = null, options = {}) => {
         const isInFolder = itemFolder !== null && folderIds.includes(itemFolder);
         
         // More verbose logging to debug the issue
-        if (folderIds.length < 10) {  // Only log for reasonable number of folders
-          // [mediaApi] Media item folder check
+        if (folderIds.length < 10 && mediaItems.indexOf(item) < 5) {  // Only log first few items
+          console.log(`[mediaApi] Media item ${item.id} folder check:`, {
+            itemFolder,
+            folderIds,
+            isInFolder
+          });
         }
         
         return isInFolder;
       });
-      // [mediaApi] Found media items in folder(s)
+      console.log(`[mediaApi] Found ${filtered.length} media items in folder(s):`, folderIds);
     } catch (error) {
-      // [mediaApi] Error filtering by folder
+      console.log('[mediaApi] Error filtering by folder:', error);
       // If there's an error, just filter by the exact folder ID
-      filtered = filtered.filter(item => item.folder === folder);
+      filtered = filtered.filter(item => item.folder === folderValue);
     }
   } else {
-    // [mediaApi] No specific folder filtering applied - showing all media
+    console.log('[mediaApi] No specific folder filtering applied - showing all media');
   }
   
   // Filter by collection
@@ -249,7 +241,19 @@ export const getMedia = async (folderArg = null, options = {}) => {
   
   // Return paginated results
   const paginatedResult = paginate(filtered, page, pageSize);
-  return wrapResponse(paginatedResult);
+  console.log('[mediaApi] Returning paginated result:', {
+    totalItems: paginatedResult.items?.length || 0,
+    pagination: paginatedResult.meta,
+    firstItem: paginatedResult.items?.[0]
+  });
+  
+  // Return in the format expected by the service layer
+  // The wrapResponse will add success, message, timestamp, requestId
+  // The data should be the array of items, with pagination metadata separate
+  return {
+    ...wrapResponse(paginatedResult.items),
+    pagination: paginatedResult.meta
+  };
 };
 
 /**

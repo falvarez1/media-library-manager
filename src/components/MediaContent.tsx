@@ -270,10 +270,14 @@ const foldersOptions: any = {
   const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
     useFolders(foldersOptions, [currentFolder]);
     
-  // Fetch specific folder contents
+  // Fetch specific folder contents - always call the hook to maintain hook order
   const folderIdParam = currentFolder !== 'all' && currentFolder ? currentFolder as FolderId : null;
-  const { data: folderContents, loading: folderContentsLoading } =
-    folderIdParam ? useFolderContents(folderIdParam, {}, [currentFolder]) : { data: null, loading: false };
+  // Always call the hook with a valid ID or a dummy ID, but control the actual API call inside the hook
+  const { data: folderContents, loading: folderContentsLoading } = useFolderContents(
+    folderIdParam || '' as FolderId, // Use empty string as fallback
+    { skip: !folderIdParam }, // Pass skip option to prevent API call when no valid ID
+    [currentFolder]
+  );
 
   // Get child folders of the current folder - safely handle string comparison
   const childrenFolders = currentView === 'folder' && currentFolder !== 'all'

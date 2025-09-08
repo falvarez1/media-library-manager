@@ -408,6 +408,11 @@ function getAppliedFiltersDescription(filters: MediaFilterOptions, sortBy: SortF
  * Saves filter state to localStorage
  */
 function saveToStorage(state: FilterState, storageKey: string): void {
+  // Check if we're on the client side
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+  
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch (error) {
@@ -419,6 +424,11 @@ function saveToStorage(state: FilterState, storageKey: string): void {
  * Loads filter state from localStorage
  */
 function loadFromStorage(storageKey: string): FilterState | null {
+  // Check if we're on the client side
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+  
   try {
     const stored = localStorage.getItem(storageKey);
     if (stored) {

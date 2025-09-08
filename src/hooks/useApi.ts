@@ -367,18 +367,31 @@ export const useFolderContents = (
   options: any = {}, 
   deps?: DependencyList
 ): UseApiReturn<any | null> => {
+  // Check if we should skip the API call
+  const shouldSkip = options?.skip === true || !id;
+  
   // Ensure deps is always an array
   const safeDeps = Array.isArray(deps) ? deps : [];
   
-  // Create a stable options key for dependency tracking
-  const optionsKey = useMemo(() => JSON.stringify(options || {}), [JSON.stringify(options || {})]);
+  // Create a stable options string for dependency tracking
+  const optionsStr = JSON.stringify(options || {});
   
-  const executeApi = useCallback((): Promise<ApiResponse<any>> => 
-    api.folders.getFolderContents(id, options), [id, optionsKey]);
+  // Create the API execution function
+  const executeApi = useCallback((): Promise<ApiResponse<any>> => {
+    // If skip is true or no valid ID, return empty result
+    if (shouldSkip) {
+      return Promise.resolve({ 
+        data: null, 
+        success: true,
+        message: 'Skipped'
+      });
+    }
+    return api.folders.getFolderContents(id, options);
+  }, [id, optionsStr, shouldSkip]);
     
   return useApi<any>(
     executeApi, 
-    [id, optionsKey, ...safeDeps]
+    [id, optionsStr, shouldSkip, ...safeDeps]
   );
 };
 

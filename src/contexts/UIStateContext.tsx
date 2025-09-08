@@ -16,6 +16,7 @@ import {
   ViewMode, 
   GridSize 
 } from '../types';
+import { getStorageItem, setStorageItem } from '../utils/storage';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -252,16 +253,14 @@ function uiStateReducer(state: UIState, action: UIAction): UIState {
  * Load UI preferences from localStorage
  */
 function loadUIPreferences(): Partial<UIState> {
-  if (typeof window === 'undefined') return {};
-
   try {
     return {
-      theme: (localStorage.getItem(STORAGE_KEYS.THEME) as Theme) || 'system',
-      viewMode: (localStorage.getItem(STORAGE_KEYS.VIEW_MODE) as ViewMode) || 'grid',
-      gridSize: (localStorage.getItem(STORAGE_KEYS.GRID_SIZE) as GridSize) || 'medium',
-      showSidebar: localStorage.getItem(STORAGE_KEYS.SHOW_SIDEBAR) !== 'false',
-      sidebarTab: (localStorage.getItem(STORAGE_KEYS.SIDEBAR_TAB) as SidebarTab) || 'files',
-      showDetails: localStorage.getItem(STORAGE_KEYS.SHOW_DETAILS) === 'true'
+      theme: getStorageItem<Theme>(STORAGE_KEYS.THEME, 'system'),
+      viewMode: getStorageItem<ViewMode>(STORAGE_KEYS.VIEW_MODE, 'grid'),
+      gridSize: getStorageItem<GridSize>(STORAGE_KEYS.GRID_SIZE, 'medium'),
+      showSidebar: getStorageItem<boolean>(STORAGE_KEYS.SHOW_SIDEBAR, true),
+      sidebarTab: getStorageItem<SidebarTab>(STORAGE_KEYS.SIDEBAR_TAB, 'files'),
+      showDetails: getStorageItem<boolean>(STORAGE_KEYS.SHOW_DETAILS, false)
     };
   } catch (error) {
     console.warn('Failed to load UI preferences from localStorage:', error);
@@ -273,15 +272,13 @@ function loadUIPreferences(): Partial<UIState> {
  * Save UI preferences to localStorage
  */
 function saveUIPreferences(state: UIState): void {
-  if (typeof window === 'undefined') return;
-
   try {
-    localStorage.setItem(STORAGE_KEYS.THEME, state.theme);
-    localStorage.setItem(STORAGE_KEYS.VIEW_MODE, state.viewMode);
-    localStorage.setItem(STORAGE_KEYS.GRID_SIZE, state.gridSize);
-    localStorage.setItem(STORAGE_KEYS.SHOW_SIDEBAR, String(state.showSidebar));
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR_TAB, state.sidebarTab);
-    localStorage.setItem(STORAGE_KEYS.SHOW_DETAILS, String(state.showDetails));
+    setStorageItem(STORAGE_KEYS.THEME, state.theme);
+    setStorageItem(STORAGE_KEYS.VIEW_MODE, state.viewMode);
+    setStorageItem(STORAGE_KEYS.GRID_SIZE, state.gridSize);
+    setStorageItem(STORAGE_KEYS.SHOW_SIDEBAR, state.showSidebar);
+    setStorageItem(STORAGE_KEYS.SIDEBAR_TAB, state.sidebarTab);
+    setStorageItem(STORAGE_KEYS.SHOW_DETAILS, state.showDetails);
   } catch (error) {
     console.warn('Failed to save UI preferences to localStorage:', error);
   }
