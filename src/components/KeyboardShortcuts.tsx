@@ -190,7 +190,13 @@ export const useKeyboardShortcuts = (shortcuts: KeyboardShortcut[]): void => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       const { key, ctrlKey, altKey, shiftKey } = event;
       
+      // Validate shortcuts array exists
+      if (!shortcuts || !Array.isArray(shortcuts)) return;
+      
       for (const shortcut of shortcuts) {
+        // Skip if shortcut or shortcut.key is undefined, null, or empty
+        if (!shortcut || !shortcut.key || typeof shortcut.key !== 'string') continue;
+        
         const keyMatch = shortcut.key.toLowerCase() === key.toLowerCase();
         const ctrlMatch = !!shortcut.ctrl === ctrlKey;
         const altMatch = !!shortcut.alt === altKey;

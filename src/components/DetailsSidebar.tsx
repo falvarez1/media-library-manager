@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag } from 'lucide-react';
 import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags } from '../hooks/useApi';
-import { useNavigation, useUIState, useMediaOperations } from '../contexts';
 import TagSelector from './TagSelector';
 import CollectionModal from './CollectionModal';
 import {
@@ -24,16 +23,29 @@ interface Comment {
 // Details tab type
 type DetailsTab = 'info' | 'metadata' | 'usage' | 'comments';
 
-const DetailsSidebar: React.FC = () => {
-  const { selectedMedia } = useNavigation();
-  const { detailsVisible, setDetailsVisible } = useUIState();
-  const { toggleStar, toggleFavorite, openEditor } = useMediaOperations();
+interface DetailsSidebarProps {
+  mediaId: MediaId;
+  onClose: () => void;
+  onOpenEditor: (mediaId: MediaId) => void;
+  onToggleStar: (mediaId: MediaId) => void;
+  onToggleFavorite: (mediaId: MediaId) => void;
+}
+
+const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
+  mediaId,
+  onClose,
+  onOpenEditor,
+  onToggleStar,
+  onToggleFavorite
+}) => {
+  // Use props directly instead of context
+  const selectedMedia = [mediaId];
+  const detailsVisible = true;
+  const setDetailsVisible = onClose;
+  const toggleStar = onToggleStar;
+  const toggleFavorite = onToggleFavorite;
+  const openEditor = onOpenEditor;
   
-  if (!selectedMedia || !detailsVisible) {
-    return null;
-  }
-  
-  const mediaId = selectedMedia;
   // Fetch media item by ID using our hook
   const { data: item, loading: itemLoading, error: itemError, refetch: refetchMediaItem } = useMediaItem(mediaId);
   
@@ -71,11 +83,33 @@ const DetailsSidebar: React.FC = () => {
   // Initialize collections when item and collections load
   useEffect(() => {
     if (item && collections) {
-      // Find collections that contain this item
-      const itemCollections = collections.items?.filter((collection: Collection) => 
-        collection.items?.includes(mediaId)
-      ) || [];
-      setMediaCollections(itemCollections);
+      // Safely extract collections array
+      let collectionsArray: Collection[] = [];
+      
+      try {
+        if (Array.isArray(collections)) {
+          collectionsArray = collections;
+        } else if (collections && typeof collections === 'object' && Array.isArray(collections.items)) {
+          collectionsArray = collections.items;
+        } else if (collections && typeof collections === 'object' && collections.data && Array.isArray(collections.data.items)) {
+          collectionsArray = collections.data.items;
+        }
+        
+        // Filter collections that contain this media item
+        if (Array.isArray(collectionsArray) && collectionsArray.length > 0) {
+          const itemCollections = collectionsArray.filter((collection: Collection) => 
+            Array.isArray(collection?.items) && collection.items.includes(mediaId)
+          );
+          setMediaCollections(itemCollections);
+        } else {
+          setMediaCollections([]);
+        }
+      } catch (error) {
+        console.error('[DetailsSidebar] Error processing collections:', error);
+        setMediaCollections([]);
+      }
+    } else {
+      setMediaCollections([]);
     }
   }, [item, collections, mediaId]);
   
@@ -107,7 +141,7 @@ const DetailsSidebar: React.FC = () => {
   
   // Handle close
   const handleClose = (): void => {
-    setDetailsVisible(false);
+    onClose();
   };
   
   // Handle tag updates

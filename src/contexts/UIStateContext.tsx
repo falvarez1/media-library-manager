@@ -10,6 +10,7 @@ import React, {
   ReactNode,
   KeyboardEvent
 } from 'react';
+import { flushSync } from 'react-dom';
 import { 
   MediaId, 
   Theme, 
@@ -150,6 +151,9 @@ const KEYBOARD_SHORTCUTS = {
  * UI state reducer for managing all UI-related state updates
  */
 function uiStateReducer(state: UIState, action: UIAction): UIState {
+  console.log('[UIStateReducer] Action dispatched:', action.type, 'payload:', (action as any).payload);
+  console.log('[UIStateReducer] Current state before:', { showDetails: state.showDetails });
+  
   switch (action.type) {
     case 'TOGGLE_SIDEBAR':
       return {
@@ -235,10 +239,13 @@ function uiStateReducer(state: UIState, action: UIAction): UIState {
       };
 
     case 'SET_SHOW_DETAILS':
-      return {
+      console.log('[UIStateContext] SET_SHOW_DETAILS action:', action.payload, 'current state:', state.showDetails);
+      const newState = {
         ...state,
         showDetails: action.payload
       };
+      console.log('[UIStateContext] New state after SET_SHOW_DETAILS:', { showDetails: newState.showDetails });
+      return newState;
 
     default:
       return state;
@@ -309,91 +316,84 @@ const UIStateContext = createContext<UIStateContextValue | undefined>(undefined)
  * @param props - Provider props including children and optional initial state
  */
 export function UIStateProvider({ children, initialState = {} }: UIStateProviderProps) {
-  // Initialize state with defaults, localStorage preferences, and any provided initial state
+  // Initialize state with defaults and any provided initial state
+  // Don't load from localStorage initially to avoid hydration mismatches
   const [state, dispatch] = useReducer(
     uiStateReducer,
     {
       ...DEFAULT_UI_STATE,
-      ...loadUIPreferences(),
       ...initialState
     }
   );
+  
+  // Load preferences from localStorage after mount (client-side only)
+  useEffect(() => {
+    const preferences = loadUIPreferences();
+    if (preferences.viewMode) dispatch({ type: 'SET_VIEW_MODE', payload: preferences.viewMode });
+    if (preferences.gridSize) dispatch({ type: 'SET_GRID_SIZE', payload: preferences.gridSize });
+    if (preferences.theme) dispatch({ type: 'SET_THEME', payload: preferences.theme });
+    if (preferences.sidebarTab) dispatch({ type: 'SET_SIDEBAR_TAB', payload: preferences.sidebarTab });
+    if (typeof preferences.showSidebar === 'boolean') dispatch({ type: 'SET_SHOW_SIDEBAR', payload: preferences.showSidebar });
+    if (typeof preferences.showDetails === 'boolean') dispatch({ type: 'SET_SHOW_DETAILS', payload: preferences.showDetails });
+  }, []);
 
-  // Memoized action creators to prevent unnecessary re-renders
-  const actions = useMemo(() => ({
-    /**
-     * Toggle the visibility of the sidebar
-     */
-    toggleSidebar: () => dispatch({ type: 'TOGGLE_SIDEBAR' }),
+  // Use useCallback for individual actions instead of memoizing the entire object
+  // This ensures each function has its own stable reference
+  const toggleSidebar = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SIDEBAR' });
+  }, []);
 
-    /**
-     * Set the active sidebar tab
-     * @param tab - The sidebar tab to activate
-     */
-    setSidebarTab: (tab: SidebarTab) => dispatch({ type: 'SET_SIDEBAR_TAB', payload: tab }),
+  const setSidebarTab = useCallback((tab: SidebarTab) => {
+    dispatch({ type: 'SET_SIDEBAR_TAB', payload: tab });
+  }, []);
 
-    /**
-     * Toggle the visibility of the details panel
-     */
-    toggleDetails: () => dispatch({ type: 'TOGGLE_DETAILS' }),
+  const toggleDetails = useCallback(() => {
+    dispatch({ type: 'TOGGLE_DETAILS' });
+  }, []);
 
-    /**
-     * Show the quick view modal for a specific media item
-     * @param mediaId - The ID of the media item to show in quick view
-     */
-    showQuickView: (mediaId: MediaId) => dispatch({ type: 'SHOW_QUICK_VIEW', payload: mediaId }),
+  const showQuickView = useCallback((mediaId: MediaId) => {
+    dispatch({ type: 'SHOW_QUICK_VIEW', payload: mediaId });
+  }, []);
 
-    /**
-     * Hide the quick view modal
-     */
-    hideQuickView: () => dispatch({ type: 'HIDE_QUICK_VIEW' }),
+  const hideQuickView = useCallback(() => {
+    dispatch({ type: 'HIDE_QUICK_VIEW' });
+  }, []);
 
-    /**
-     * Open the image editor for a specific media item
-     * @param mediaId - The ID of the media item to edit
-     */
-    openImageEditor: (mediaId: MediaId) => dispatch({ type: 'OPEN_IMAGE_EDITOR', payload: mediaId }),
+  const openImageEditor = useCallback((mediaId: MediaId) => {
+    dispatch({ type: 'OPEN_IMAGE_EDITOR', payload: mediaId });
+  }, []);
 
-    /**
-     * Close the image editor
-     */
-    closeImageEditor: () => dispatch({ type: 'CLOSE_IMAGE_EDITOR' }),
+  const closeImageEditor = useCallback(() => {
+    dispatch({ type: 'CLOSE_IMAGE_EDITOR' });
+  }, []);
 
-    /**
-     * Close all open modals and overlays
-     */
-    closeAllModals: () => dispatch({ type: 'CLOSE_ALL_MODALS' }),
+  const closeAllModals = useCallback(() => {
+    dispatch({ type: 'CLOSE_ALL_MODALS' });
+  }, []);
 
-    /**
-     * Set the application theme
-     * @param theme - The theme to apply
-     */
-    setTheme: (theme: Theme) => dispatch({ type: 'SET_THEME', payload: theme }),
+  const setTheme = useCallback((theme: Theme) => {
+    dispatch({ type: 'SET_THEME', payload: theme });
+  }, []);
 
-    /**
-     * Set the media view mode
-     * @param viewMode - The view mode to apply
-     */
-    setViewMode: (viewMode: ViewMode) => dispatch({ type: 'SET_VIEW_MODE', payload: viewMode }),
+  const setViewMode = useCallback((viewMode: ViewMode) => {
+    dispatch({ type: 'SET_VIEW_MODE', payload: viewMode });
+  }, []);
 
-    /**
-     * Set the grid size for grid view mode
-     * @param gridSize - The grid size to apply
-     */
-    setGridSize: (gridSize: GridSize) => dispatch({ type: 'SET_GRID_SIZE', payload: gridSize }),
+  const setGridSize = useCallback((gridSize: GridSize) => {
+    dispatch({ type: 'SET_GRID_SIZE', payload: gridSize });
+  }, []);
 
-    /**
-     * Set sidebar visibility
-     * @param visible - Whether the sidebar should be visible
-     */
-    setSidebarVisible: (visible: boolean) => dispatch({ type: 'SET_SHOW_SIDEBAR', payload: visible }),
+  const setSidebarVisible = useCallback((visible: boolean) => {
+    dispatch({ type: 'SET_SHOW_SIDEBAR', payload: visible });
+  }, []);
 
-    /**
-     * Set details panel visibility
-     * @param visible - Whether the details panel should be visible
-     */
-    setDetailsVisible: (visible: boolean) => dispatch({ type: 'SET_SHOW_DETAILS', payload: visible })
-  }), []);
+  const setDetailsVisible = useCallback((visible: boolean) => {
+    console.log('[UIStateContext] setDetailsVisible called with:', visible);
+    // Use flushSync to ensure synchronous state update in React 18+
+    flushSync(() => {
+      dispatch({ type: 'SET_SHOW_DETAILS', payload: visible });
+    });
+  }, []);
 
   // Keyboard shortcut handler
   const handleKeyboardShortcut = useCallback((event: KeyboardEvent) => {
@@ -406,7 +406,7 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
     // Allow Escape to work everywhere
     if (event.code === KEYBOARD_SHORTCUTS.CLOSE_MODALS) {
       event.preventDefault();
-      actions.closeAllModals();
+      closeAllModals();
       return;
     }
 
@@ -418,27 +418,27 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
       switch (event.code) {
         case KEYBOARD_SHORTCUTS.TOGGLE_SIDEBAR:
           event.preventDefault();
-          actions.toggleSidebar();
+          toggleSidebar();
           break;
         case KEYBOARD_SHORTCUTS.TOGGLE_DETAILS:
           event.preventDefault();
-          actions.toggleDetails();
+          toggleDetails();
           break;
         case KEYBOARD_SHORTCUTS.SWITCH_TO_FILES:
           event.preventDefault();
-          actions.setSidebarTab('files');
+          setSidebarTab('files');
           break;
         case KEYBOARD_SHORTCUTS.SWITCH_TO_COLLECTIONS:
           event.preventDefault();
-          actions.setSidebarTab('collections');
+          setSidebarTab('collections');
           break;
         case KEYBOARD_SHORTCUTS.SWITCH_TO_TAGS:
           event.preventDefault();
-          actions.setSidebarTab('tags');
+          setSidebarTab('tags');
           break;
       }
     }
-  }, [actions]);
+  }, [closeAllModals, toggleSidebar, toggleDetails, setSidebarTab]);
 
   // Set up keyboard shortcuts
   useEffect(() => {
@@ -452,6 +452,7 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
 
   // Save preferences to localStorage when relevant state changes
   useEffect(() => {
+    console.log('[UIStateContext] Saving preferences, showDetails:', state.showDetails);
     saveUIPreferences(state);
   }, [
     state.theme,
@@ -462,11 +463,31 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
     state.showDetails
   ]);
 
-  // Memoized context value to prevent unnecessary re-renders
+  // IMPORTANT: Memoize the context value to ensure proper updates
+  // Without memoization, the value is recreated on every render
   const contextValue = useMemo<UIStateContextValue>(() => ({
     ...state,
-    ...actions
-  }), [state, actions]);
+    toggleSidebar,
+    setSidebarTab,
+    toggleDetails,
+    showQuickView,
+    hideQuickView,
+    openImageEditor,
+    closeImageEditor,
+    closeAllModals,
+    setTheme,
+    setViewMode,
+    setGridSize,
+    setSidebarVisible,
+    setDetailsVisible
+  }), [state, toggleSidebar, setSidebarTab, toggleDetails, showQuickView, 
+      hideQuickView, openImageEditor, closeImageEditor, closeAllModals,
+      setTheme, setViewMode, setGridSize, setSidebarVisible, setDetailsVisible]);
+
+  // Add debug logging
+  useEffect(() => {
+    console.log('[UIStateContext] State updated - showDetails:', state.showDetails);
+  }, [state.showDetails]);
 
   return (
     <UIStateContext.Provider value={contextValue}>

@@ -29,6 +29,8 @@ import { useNavigation, useUIState } from '../contexts';
 // Component props interface - now simplified since most props come from context
 interface FolderNavigationProps {
   onTagFilter?: (tags: string[]) => void;
+  onFolderSelected?: (folderId: string) => void;
+  currentFolder?: string;
 }
 
 // Context menu interface
@@ -59,11 +61,13 @@ interface FolderItemProps {
 }
 
 const FolderNavigation: React.FC<FolderNavigationProps> = ({
-  onTagFilter
+  onTagFilter,
+  onFolderSelected,
+  currentFolder: propCurrentFolder
 }) => {
   // Context hooks
   const {
-    currentFolder,
+    currentFolder: contextCurrentFolder,
     currentView, 
     currentCollection,
     navigateToFolder,
@@ -75,6 +79,10 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
     sidebarTab,
     setSidebarTab
   } = useUIState();
+  
+  // Use prop currentFolder if provided, otherwise use context
+  const currentFolder = propCurrentFolder || contextCurrentFolder;
+  
   // Core state
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['1', '2', '3']); // Default expanded folders
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -483,7 +491,11 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
                 }`}
                 onClick={() => {
                   setCurrentView('folder');
-                  navigateToFolder('all');
+                  if (onFolderSelected) {
+                    onFolderSelected('all');
+                  } else {
+                    navigateToFolder('all');
+                  }
                 }}
               >
                 <Folders size={16} />
@@ -553,7 +565,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
                     currentView={currentView}
                     level={0}
                     onToggle={toggleFolder}
-                    onClick={navigateToFolder}
+                    onClick={onFolderSelected || navigateToFolder}
                     handleContextMenu={handleContextMenu}
                     handleDragStart={handleDragStart}
                     handleDragOver={handleDragOver}

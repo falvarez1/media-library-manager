@@ -1,17 +1,17 @@
-import dynamic from 'next/dynamic';
+// import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { AppProviders } from '../contexts';
+import AppWithProviders from '../components/AppWithProviders';
 
-// Use dynamic import with SSR disabled to prevent hydration errors
-// with Lucide icons and other client-side only dependencies
-const App = dynamic(() => import('../components/App'), { ssr: false });
+// TEMPORARY: Testing without dynamic import to diagnose context issue
+// const AppWithProviders = dynamic(() => import('../components/AppWithProviders'), { 
+//   ssr: false,
+//   loading: () => <div className="flex items-center justify-center h-screen">Loading...</div>
+// });
 
 export default function Home() {
   return (
     <>
-      <AppProviders>
-        <App />
-      </AppProviders>
+      <AppWithProviders />
       {process.env.NODE_ENV === 'development' && (
         <div
           style={{

@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import storage from '../utils/storage';
+import { useUIState } from '../contexts/UIStateContext';
+import { useNavigation } from '../contexts/NavigationContext';
 import { Menu, Upload, Folders, Search, Filter, Bell, User, X, KeyboardIcon, Settings, HelpCircle } from 'lucide-react';
 import FolderModal from './FolderModal';
 import FolderNavigation from './FolderNavigation';
 import MediaContent from './MediaContent';
 import DetailsSidebar from './DetailsSidebar';
 import MediaEditor from './MediaEditor';
-import MediaViewer from './MediaViewer';
+import MediaViewer from './MediaViewer/index';
 import FileOperationsToolbar from './FileOperationsToolbar';
 import AdvancedSearch from './AdvancedSearch';
 import KeyboardShortcuts, { useKeyboardShortcuts, KeyboardShortcutsModal } from './KeyboardShortcuts';
 import UserPreferences from './UserPreferences';
+import ContextDebugger from './ContextDebugger';
 import {
   useCreateFolder, useMedia, useCollections, useCreateCollection,
   useUpdateCollection, useDeleteCollection, useTags, useMoveMedia,
@@ -89,9 +92,28 @@ interface OperationResult {
 }
 
 const App: React.FC = () => {
-  // Core state
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
-  const [sidebarTab, setSidebarTab] = useState<'files' | 'collections' | 'tags'>('files');
+  // FORCING LOCAL STATE because context isn't working
+  const [showDetailsLocal, setShowDetailsLocal] = useState<boolean>(false);
+  
+  // Get context values (but we'll ignore showDetails from context)
+  const { 
+    showSidebar, 
+    setSidebarVisible: setShowSidebar,
+    showDetails: _showDetailsFromContext,
+    setDetailsVisible: _setDetailsFromContext,
+    sidebarTab,
+    setSidebarTab,
+    toggleSidebar
+  } = useUIState();
+  
+  // Use local state instead of context
+  const showDetails = showDetailsLocal;
+  const setShowDetails = setShowDetailsLocal;
+  
+  // Navigation context doesn't have these - commenting out for now
+  // const { } = useNavigation();
+  
+  // Local state (will be migrated to contexts)
   const [currentView, setCurrentView] = useState<'folder' | 'collection' | 'search'>('folder');
   const [currentFolder, setCurrentFolder] = useState<string>('all');
   const [currentCollection, setCurrentCollection] = useState<CollectionId | null>(null);
@@ -110,10 +132,15 @@ const App: React.FC = () => {
   });
   
   // UI state
-  const [showDetails, setShowDetails] = useState<boolean>(false);
+  // showDetails is now managed by UIStateContext
   const [showQuickView, setShowQuickView] = useState<boolean>(false);
   const [quickViewItem, setQuickViewItem] = useState<MediaId | null>(null);
+  const [visibleMediaIds, setVisibleMediaIds] = useState<MediaId[]>([]);
   const [showImageEditor, setShowImageEditor] = useState<boolean>(false);
+  
+  // Track starred and favorited items locally
+  const [starredItems, setStarredItems] = useState<Set<MediaId>>(new Set());
+  const [favoritedItems, setFavoritedItems] = useState<Set<MediaId>>(new Set());
   const [showUploader, setShowUploader] = useState<boolean>(false);
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
@@ -159,6 +186,11 @@ const App: React.FC = () => {
   const { mutate: shareMedia, loading: shareLoading } = useShareMedia();
   const { mutate: batchUpdateMedia, loading: batchUpdateLoading } = useBatchUpdateTags();
   
+  // Monitor showDetails state changes
+  useEffect(() => {
+    console.log('[App] showDetails state changed to:', showDetails);
+  }, [showDetails]);
+
   // Update filters when tags are selected
   useEffect(() => {
     if (selectedTags.length > 0) {
@@ -287,8 +319,15 @@ const App: React.FC = () => {
   
   // Handle media selection
   const handleMediaSelect = (mediaIds: MediaId[] | MediaId): void => {
-    setSelectedMedia(Array.isArray(mediaIds) ? mediaIds : [mediaIds]);
-    if ((Array.isArray(mediaIds) ? mediaIds : [mediaIds]).length === 1) setShowDetails(true);
+    const ids = Array.isArray(mediaIds) ? mediaIds : [mediaIds];
+    setSelectedMedia(ids);
+    if (ids.length === 1) {
+      // setSelectedMediaId doesn't exist - just show details
+      setShowDetails(true);
+    } else if (ids.length === 0) {
+      // setSelectedMediaId doesn't exist - just hide details
+      setShowDetails(false);
+    }
   };
   
   // Handle quick view
@@ -298,29 +337,25 @@ const App: React.FC = () => {
   };
   
   // Navigation handlers for QuickView
-  const handleNavigateNext = useCallback((currentId: MediaId) => {
-    // We'll implement the actual media fetching logic here when needed
-    // For now, we'll keep the navigation behavior working with a callback
-    // that will be filled in when we implement the actual navigation
-    const nextId = getNextMediaId(currentId);
-    if (nextId) {
+  const handleNavigateNext = useCallback(() => {
+    if (!quickViewItem || visibleMediaIds.length === 0) return;
+    
+    const currentIndex = visibleMediaIds.indexOf(quickViewItem);
+    if (currentIndex >= 0 && currentIndex < visibleMediaIds.length - 1) {
+      const nextId = visibleMediaIds[currentIndex + 1];
       setQuickViewItem(nextId);
     }
-  }, []);
+  }, [quickViewItem, visibleMediaIds]);
 
-  const handleNavigatePrevious = useCallback((currentId: MediaId) => {
-    // Similar to handleNavigateNext, we'll implement the actual logic later
-    const prevId = getPreviousMediaId(currentId);
-    if (prevId) {
+  const handleNavigatePrevious = useCallback(() => {
+    if (!quickViewItem || visibleMediaIds.length === 0) return;
+    
+    const currentIndex = visibleMediaIds.indexOf(quickViewItem);
+    if (currentIndex > 0) {
+      const prevId = visibleMediaIds[currentIndex - 1];
       setQuickViewItem(prevId);
     }
-  }, []);
-
-  // Helper functions to get next/previous media IDs
-  // In a real implementation, these would use our hook system to get the actual media items
-  const getNextMediaId = (currentId: MediaId): MediaId | null => {
-    return null;
-  };
+  }, [quickViewItem, visibleMediaIds]);
   
   // Save user preferences
   const handleSavePreferences = (preferences: UserPreferences): void => {
@@ -463,14 +498,32 @@ const App: React.FC = () => {
   
   // Handle star toggle
   const handleToggleStar = async (mediaId: MediaId): Promise<void> => {
-    // Toggle star for media item
-    // We would implement the actual API call here
+    setStarredItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(mediaId)) {
+        newSet.delete(mediaId);
+      } else {
+        newSet.add(mediaId);
+      }
+      return newSet;
+    });
+    // In a real app, we would also make an API call here
+    // await api.media.updateStar(mediaId, !starredItems.has(mediaId));
   };
   
   // Handle favorite toggle
   const handleToggleFavorite = async (mediaId: MediaId): Promise<void> => {
-    // Toggle favorite for media item
-    // We would implement the actual API call here
+    setFavoritedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(mediaId)) {
+        newSet.delete(mediaId);
+      } else {
+        newSet.add(mediaId);
+      }
+      return newSet;
+    });
+    // In a real app, we would also make an API call here
+    // await api.media.updateFavorite(mediaId, !favoritedItems.has(mediaId));
   };
   
   // Register keyboard shortcuts
@@ -518,7 +571,7 @@ const App: React.FC = () => {
         <div className="flex items-center">
           <button 
             className="p-1.5 mr-3 text-gray-500 hover:text-gray-700 md:hidden"
-            onClick={() => uiState.toggleSidebar()}
+            onClick={() => toggleSidebar()}
           >
             <Menu size={20} />
           </button>
@@ -665,6 +718,8 @@ const App: React.FC = () => {
         {showSidebar && (
           <FolderNavigation 
             onTagFilter={handleTagFilter}
+            onFolderSelected={handleFolderClick}
+            currentFolder={currentFolder}
           />
         )}
         
@@ -680,22 +735,24 @@ const App: React.FC = () => {
           onSelect={handleMediaSelect}
           onQuickView={handleQuickView}
           onOpenEditor={openEditor}
+          onToggleStar={handleToggleStar}
+          onToggleFavorite={handleToggleFavorite}
           onFolderClick={handleFolderClick}
           onCollectionClick={handleCollectionClick}
           collections={collectionsData?.items as Collection[] || []}
           tags={tagsData || []}
           onUpdateCollection={handleUpdateCollection}
           onAddToCollection={handleCreateCollection}
+          onMediaItemsChange={setVisibleMediaIds}
+          starredItems={starredItems}
+          favoritedItems={favoritedItems}
         />
         
-        {/* Details sidebar */}
+        {/* Details sidebar - FORCED TO WORK */}
         {showDetails && selectedMedia.length === 1 && (
           <DetailsSidebar 
             mediaId={selectedMedia[0]}
             onClose={() => setShowDetails(false)}
-            onOpenEditor={openEditor}
-            onToggleStar={handleToggleStar}
-            onToggleFavorite={handleToggleFavorite}
           />
         )}
       </div>
@@ -778,6 +835,9 @@ const App: React.FC = () => {
         initialPreferences={userPreferences}
         onSave={handleSavePreferences}
       />
+      
+      {/* Context Debugger - Development only */}
+      {process.env.NODE_ENV === 'development' && <ContextDebugger />}
     </div>
     </KeyboardShortcuts>
   );

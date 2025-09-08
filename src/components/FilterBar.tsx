@@ -12,22 +12,15 @@ import {
 const FilterBar: React.FC = () => {
   const { 
     filters, 
-    setFilters, 
-    setFilterActive, 
-    toggleFilterPanel 
+    setFilters,
+    clearFilters
   } = useFilter();
   // Fetch tags data using our hook system
   const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
   // Handle clearing all filters
   const clearAllFilters = (): void => {
-    setFilters({
-      types: [],
-      tags: [],
-      used: undefined,
-      status: []
-    });
-    setFilterActive(false);
+    clearFilters();
   };
   
   // Remove a specific type filter
@@ -36,16 +29,6 @@ const FilterBar: React.FC = () => {
       ...filters,
       types: (filters.types || []).filter(t => t !== type)
     });
-    
-    // If no filters remain, deactivate filtering
-    if (
-      filters.types?.length === 1 && 
-      (filters.tags?.length || 0) === 0 && 
-      filters.used === undefined && 
-      (filters.status?.length || 0) === 0
-    ) {
-      setFilterActive(false);
-    }
   };
   
   // Remove a specific tag filter
@@ -54,16 +37,6 @@ const FilterBar: React.FC = () => {
       ...filters,
       tags: (filters.tags || []).filter(t => t !== tag)
     });
-    
-    // If no filters remain, deactivate filtering
-    if (
-      (filters.types?.length || 0) === 0 && 
-      (filters.tags?.length || 0) === 1 && 
-      filters.used === undefined && 
-      (filters.status?.length || 0) === 0
-    ) {
-      setFilterActive(false);
-    }
   };
   
   // Remove usage filter
@@ -72,15 +45,6 @@ const FilterBar: React.FC = () => {
       ...filters,
       used: undefined
     });
-    
-    // If no filters remain, deactivate filtering
-    if (
-      (filters.types?.length || 0) === 0 && 
-      (filters.tags?.length || 0) === 0 && 
-      (filters.status?.length || 0) === 0
-    ) {
-      setFilterActive(false);
-    }
   };
   
   // Remove a specific status filter
@@ -89,34 +53,14 @@ const FilterBar: React.FC = () => {
       ...filters,
       status: (filters.status || []).filter(s => s !== status)
     });
-    
-    // If no filters remain, deactivate filtering
-    if (
-      (filters.types?.length || 0) === 0 && 
-      (filters.tags?.length || 0) === 0 && 
-      filters.used === undefined && 
-      (filters.status?.length || 0) === 1
-    ) {
-      setFilterActive(false);
-    }
   };
   
   // Handle type filter change
   const handleTypeFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     if (e.target.value) {
       setFilters({...filters, types: [e.target.value as MediaType]});
-      setFilterActive(true);
     } else {
       setFilters({...filters, types: []});
-      
-      // Check if any other filters are active
-      if (
-        (filters.tags?.length || 0) === 0 && 
-        filters.used === undefined && 
-        (filters.status?.length || 0) === 0
-      ) {
-        setFilterActive(false);
-      }
     }
   };
   
@@ -124,18 +68,8 @@ const FilterBar: React.FC = () => {
   const handleTagFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     if (e.target.value) {
       setFilters({...filters, tags: [e.target.value as TagId]});
-      setFilterActive(true);
     } else {
       setFilters({...filters, tags: []});
-      
-      // Check if any other filters are active
-      if (
-        (filters.types?.length || 0) === 0 && 
-        filters.used === undefined && 
-        (filters.status?.length || 0) === 0
-      ) {
-        setFilterActive(false);
-      }
     }
   };
   
@@ -144,18 +78,8 @@ const FilterBar: React.FC = () => {
     const value = e.target.value;
     if (value) {
       setFilters({...filters, used: value === 'used'});
-      setFilterActive(true);
     } else {
       setFilters({...filters, used: undefined});
-      
-      // Check if any other filters are active
-      if (
-        (filters.types?.length || 0) === 0 && 
-        (filters.tags?.length || 0) === 0 && 
-        (filters.status?.length || 0) === 0
-      ) {
-        setFilterActive(false);
-      }
     }
   };
   
@@ -163,18 +87,8 @@ const FilterBar: React.FC = () => {
   const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     if (e.target.value) {
       setFilters({...filters, status: [e.target.value as Status]});
-      setFilterActive(true);
     } else {
       setFilters({...filters, status: []});
-      
-      // Check if any other filters are active
-      if (
-        (filters.types?.length || 0) === 0 && 
-        (filters.tags?.length || 0) === 0 && 
-        filters.used === undefined
-      ) {
-        setFilterActive(false);
-      }
     }
   };
   

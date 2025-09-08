@@ -227,7 +227,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
                 onChange={handleParentIdChange}
               >
                 <option value="">None (Top Level)</option>
-                {collections
+                {Array.isArray(collections) && collections
                   .filter(collection => collection.id !== initialValues.id) // Prevent circular references
                   .map(collection => (
                     <option key={collection.id} value={collection.id}>

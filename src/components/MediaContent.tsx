@@ -26,12 +26,25 @@ import type {
 // ============================================================================
 
 interface MediaContentProps {
+  currentView?: string;
+  currentFolder?: FolderId | 'all' | null;
+  currentCollection?: CollectionId | null;
+  searchTerm?: string;
+  selectedMedia?: MediaId[];
+  onSelect?: (mediaIds: MediaId[] | MediaId) => void;
   onQuickView: (mediaId: MediaId) => void;
   onOpenEditor: (mediaId: MediaId) => void;
+  onToggleStar?: (mediaId: MediaId) => void;
+  onToggleFavorite?: (mediaId: MediaId) => void;
+  onFolderClick?: (folderId: FolderId) => void;
+  onCollectionClick?: (collectionId: CollectionId) => void;
   collections?: Collection[];
   tags?: any[];
   onUpdateCollection?: (collectionId: CollectionId, updates: Partial<Collection>) => void;
   onAddToCollection?: (data: { name: string; items: MediaId[] }) => void;
+  onMediaItemsChange?: (mediaIds: MediaId[]) => void;
+  starredItems?: Set<MediaId>;
+  favoritedItems?: Set<MediaId>;
 }
 
 interface MediaListViewProps {
@@ -61,23 +74,36 @@ interface FolderTreeItemProps {
 // ============================================================================
 
 const MediaContent: React.FC<MediaContentProps> = ({
+  currentView = 'all',
+  currentFolder = null,
+  currentCollection = null,
+  searchTerm = '',
+  selectedMedia = [],
+  onSelect,
   onQuickView,
   onOpenEditor,
+  onToggleStar,
+  onToggleFavorite,
+  onFolderClick,
+  onCollectionClick,
+  onMediaItemsChange,
   collections = [],
   tags = [],
   onUpdateCollection,
-  onAddToCollection
+  onAddToCollection,
+  starredItems = new Set(),
+  favoritedItems = new Set()
 }) => {
   // Get values from contexts
   const {
-    currentView,
-    currentFolder,
-    currentCollection,
-    searchTerm,
-    selectedMedia,
-    selectMultipleMedia: onSelect,
-    navigateToFolder: onFolderClick,
-    navigateToCollection: onCollectionClick
+    currentView: navCurrentView,
+    currentFolder: navCurrentFolder,
+    currentCollection: navCurrentCollection,
+    searchTerm: navSearchTerm,
+    selectedMedia: navSelectedMedia,
+    selectMultipleMedia,
+    navigateToFolder,
+    navigateToCollection
   } = useNavigation();
   
   const {
@@ -252,6 +278,13 @@ const MediaContent: React.FC<MediaContentProps> = ({
   // Get media items with debug logging
   const mediaItems: MediaItemType[] = mediaData?.items || [];
   
+  // Notify parent when media items change
+  useEffect(() => {
+    if (onMediaItemsChange && mediaItems.length > 0) {
+      onMediaItemsChange(mediaItems.map(item => item.id));
+    }
+  }, [mediaItems, onMediaItemsChange]);
+  
   // Debug logging
   // MediaContent Debug info available
   
@@ -342,39 +375,39 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
       const end = Math.max(lastSelectedIndex, currentIndex);
       
       const itemsToSelect = items.slice(start, end + 1);
-      onSelect([...new Set([...selectedMedia, ...itemsToSelect])]);
+      if (onSelect) onSelect([...new Set([...selectedMedia, ...itemsToSelect])]);
       
     // Handle multi-select with ctrl/cmd key
     } else if (event.ctrlKey || event.metaKey) {
       if (selectedMedia.includes(mediaId)) {
-        onSelect(selectedMedia.filter(id => id !== mediaId));
+        if (onSelect) onSelect(selectedMedia.filter(id => id !== mediaId));
       } else {
-        onSelect([...selectedMedia, mediaId]);
+        if (onSelect) onSelect([...selectedMedia, mediaId]);
       }
       
-    // Normal click behavior
+    // Normal click behavior - select the item (which will open properties panel)
     } else {
-      onSelect([mediaId]);
+      if (onSelect) onSelect([mediaId]);
     }
   };
   
   // Toggle media selection in selection mode
   const toggleMediaSelection = (mediaId: MediaId): void => {
     if (selectedMedia.includes(mediaId)) {
-      onSelect(selectedMedia.filter(id => id !== mediaId));
+      if (onSelect) onSelect(selectedMedia.filter(id => id !== mediaId));
     } else {
-      onSelect([...selectedMedia, mediaId]);
+      if (onSelect) onSelect([...selectedMedia, mediaId]);
     }
   };
   
   // Select all items
   const selectAll = (): void => {
-    onSelect(mediaItems.map(item => item.id));
+    if (onSelect) onSelect(mediaItems.map(item => item.id));
   };
   
   // Deselect all items
   const deselectAll = (): void => {
-    onSelect([]);
+    if (onSelect) onSelect([]);
   };
 
   // Format path string
@@ -749,11 +782,17 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
                     mediaItems.map((item: MediaItemType) => (
                       <MediaItem
                         key={item.id}
-                        item={item}
+                        item={{
+                          ...item,
+                          starred: starredItems.has(item.id),
+                          favorited: favoritedItems.has(item.id)
+                        }}
                         isSelected={selectedMedia.includes(item.id)}
                         selectionMode={mediaSelectionMode}
                         onClick={(e: React.MouseEvent<HTMLDivElement>) => handleMediaClick(item.id, e)}
                         onQuickView={() => onQuickView(item.id)}
+                        onToggleStar={onToggleStar}
+                        onToggleFavorite={onToggleFavorite}
                       />
                     ))
                   )}
@@ -765,6 +804,8 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
                   selectionMode={mediaSelectionMode}
                   onMediaClick={handleMediaClick}
                   onQuickView={onQuickView}
+                  onToggleStar={onToggleStar}
+                  onToggleFavorite={onToggleFavorite}
                   onDragStart={handleDragStart}
                   tags={tags}
                 />
@@ -792,6 +833,8 @@ const MediaListView: React.FC<MediaListViewProps> = ({
   selectionMode, 
   onMediaClick, 
   onQuickView,
+  onToggleStar,
+  onToggleFavorite,
   onDragStart,
   tags = []
 }) => {
@@ -956,6 +999,28 @@ const MediaListView: React.FC<MediaListViewProps> = ({
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
                     <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+                <button 
+                  className={`text-gray-400 hover:text-yellow-500 ${item.starred ? 'text-yellow-500' : ''}`}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (onToggleStar) onToggleStar(item.id);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={item.starred ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </button>
+                <button 
+                  className={`text-gray-400 hover:text-red-500 ${item.favorited ? 'text-red-500' : ''}`}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (onToggleFavorite) onToggleFavorite(item.id);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={item.favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/>
                   </svg>
                 </button>
                 <button 
