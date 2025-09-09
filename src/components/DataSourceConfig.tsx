@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDataSource } from '../hooks/useApi';
 import config from '../services/config';
 import {

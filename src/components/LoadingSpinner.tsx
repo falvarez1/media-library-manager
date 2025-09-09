@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Loader, Loader2, RotateCw, RefreshCw } from 'lucide-react';
+import { Loader } from 'lucide-react';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -420,9 +420,4 @@ export function useLoadingState(initialLoading = false, delay = 300) {
 // ============================================================================
 
 export default LoadingSpinner;
-export type { 
-  LoadingSpinnerProps, 
-  SpinnerSize, 
-  SpinnerVariant, 
-  SpinnerStyle 
-};
+export type { LoadingSpinnerProps };

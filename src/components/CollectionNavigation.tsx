@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Folder, Plus, Pencil, Trash2, Share } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, Share, Plus } from 'lucide-react';
 import { useCollections, useCreateCollection, useUpdateCollection, useDeleteCollection } from '../hooks/useApi';
-import { useNavigation, useMediaOperations } from '../contexts';
+import { useNavigation } from '../contexts';
 import CollectionModal from './CollectionModal';
 import ConfirmationDialog from './ConfirmationDialog';
 import {
   Collection,
   CollectionId,
-  HexColor,
-  MouseEvent
+  HexColor
 } from '../types';
 
 // Collection form data interface to match CollectionModal
@@ -22,10 +21,13 @@ interface CollectionFormData {
 
 const CollectionNavigation: React.FC = () => {
   const { currentCollection, navigateToCollection } = useNavigation();
-  const { createCollection, updateCollection, deleteCollection } = useMediaOperations();
+  // Use API hooks for collection operations
+  const { mutate: createCollection } = useCreateCollection();
+  const { mutate: updateCollection } = useUpdateCollection();
+  const { mutate: deleteCollection } = useDeleteCollection();
   
   // Get collections from API
-  const { data: collectionsData, loading: collectionsLoading } = useCollections();
+  const { data: collectionsData } = useCollections();
   const collections = collectionsData?.items || [];
   const [expandedCollections, setExpandedCollections] = useState<CollectionId[]>([]);
   const [showNewCollectionModal, setShowNewCollectionModal] = useState<boolean>(false);
@@ -35,9 +37,7 @@ const CollectionNavigation: React.FC = () => {
   const [parentIdForNew, setParentIdForNew] = useState<CollectionId | null>(null);
 
   // Get root collections (those with no parent)
-  const rootCollections = Array.isArray(collections) 
-    ? collections.filter(collection => !collection.parentId)
-    : [];
+  // rootCollections removed - unused
 
   // Toggle collection expansion
   const toggleCollection = (collectionId: CollectionId): void => {
@@ -266,8 +266,8 @@ const CollectionNavigation: React.FC = () => {
             ? ' and all its subcollections'
             : ''
         }? This action cannot be undone.`}
-        confirmButtonText="Delete"
-        confirmButtonColor="red"
+        confirmText="Delete"
+        type="error"
       />
     </div>
   );

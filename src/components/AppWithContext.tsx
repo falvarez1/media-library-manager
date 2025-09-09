@@ -1,26 +1,14 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AppProviders } from '../contexts/AppProviders';
-import { useUIState } from '../contexts/UIStateContext';
-import { useNavigation } from '../contexts/NavigationContext';
 import App from './App';
 
 /**
  * Bridge component that syncs App.tsx state with context values
  */
 const AppBridge: React.FC = () => {
-  const { 
-    showSidebar, 
-    showDetails, 
-    setSidebarVisible, 
-    setDetailsVisible 
-  } = useUIState();
-  
-  const { 
-    selectedMediaId, 
-    setSelectedMediaId 
-  } = useNavigation();
+  // Context values are accessed in App component directly
 
   // Create a modified App component that syncs with contexts
   return (

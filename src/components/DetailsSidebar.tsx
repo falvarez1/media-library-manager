@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag, Save, Calendar, AlertCircle } from 'lucide-react';
-import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags, useUpdateMediaItem } from '../hooks/useApi';
+import { useState, useEffect } from 'react';
+import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, ExternalLink, Loader, Folder, Save, AlertCircle, Tag } from 'lucide-react';
+import { useMediaItem, useTags, useCollections, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags, useUpdateMediaItem } from '../hooks/useApi';
 import TagSelector from './TagSelector';
-import CollectionModal from './CollectionModal';
 import { useNotification } from '../hooks/useNotification';
 import {
   MediaId,
   CollectionId,
   TagId,
-  MediaItem,
   MediaMetadata,
   Collection,
-  MouseEvent,
   UpdateMediaItem
 } from '../types';
 
@@ -42,10 +39,6 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   onToggleStar,
   onToggleFavorite
 }) => {
-  // Use props directly instead of context
-  const selectedMedia = [mediaId];
-  const detailsVisible = true;
-  const setDetailsVisible = onClose;
   const toggleStar = onToggleStar;
   const toggleFavorite = onToggleFavorite;
   const openEditor = onOpenEditor;
@@ -57,7 +50,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   const { data: tags, loading: tagsLoading, error: tagsError } = useTags();
   
   // Fetch all collections data
-  const { data: collections, loading: collectionsLoading, error: collectionsError } = useCollections();
+  const { data: collections } = useCollections();
   
   // Details tab state
   const [detailsTab, setDetailsTab] = useState<DetailsTab>('info');
@@ -80,11 +73,11 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   const [mediaCollections, setMediaCollections] = useState<Collection[]>([]);
   
   // Batch update tags hook
-  const { mutate: updateTags, loading: updateTagsLoading } = useBatchUpdateTags();
+  const { mutate: updateTags } = useBatchUpdateTags();
   
   // Collection operations hooks
-  const { mutate: addItems, loading: addToCollectionLoading } = useAddItemsToCollection();
-  const { mutate: removeItems, loading: removeFromCollectionLoading } = useRemoveItemsFromCollection();
+  const { mutate: addItems } = useAddItemsToCollection();
+  const { mutate: removeItems } = useRemoveItemsFromCollection();
   
   // Media update hook and notifications
   const { mutate: updateMediaItem, loading: updateMediaLoading } = useUpdateMediaItem();
@@ -114,8 +107,8 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
           collectionsArray = collections;
         } else if (collections && typeof collections === 'object' && Array.isArray(collections.items)) {
           collectionsArray = collections.items;
-        } else if (collections && typeof collections === 'object' && collections.data && Array.isArray(collections.data)) {
-          collectionsArray = collections.data;
+        } else if (collections && typeof collections === 'object' && (collections as any).data && Array.isArray((collections as any).data)) {
+          collectionsArray = (collections as any).data;
         }
         
         // Filter collections that contain this media item

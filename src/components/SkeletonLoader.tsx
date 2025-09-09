@@ -672,24 +672,5 @@ Add to your global CSS file (globals.css):
 // EXPORTS
 // ============================================================================
 
-export default Skeleton;
-export {
-  SkeletonText,
-  SkeletonTitle,
-  SkeletonThumbnail,
-  MediaGridSkeleton,
-  MediaListSkeleton,
-  SidebarSkeleton,
-  DetailsSidebarSkeleton,
-  SkeletonCard
-};
-
-export type {
-  SkeletonProps,
-  SkeletonVariant,
-  SkeletonSize,
-  MediaGridSkeletonProps,
-  MediaListSkeletonProps,
-  SidebarSkeletonProps,
-  DetailsSidebarSkeletonProps
-};
+export default SkeletonLoader;
+export type { SkeletonLoaderProps };

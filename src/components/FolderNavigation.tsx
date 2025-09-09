@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Folders, Clock, Star, Heart, Share, Plus, Tag, Settings, Terminal, Loader, FolderPlus, X, AlertCircle, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Folders, Clock, Star, Heart, Share, Settings, Terminal, Loader, X, AlertCircle, Filter, ChevronDown, ChevronRight, Plus, Tag } from 'lucide-react';
 import FolderModal from './FolderModal';
 import FolderContextMenu from './FolderContextMenu';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -10,19 +10,17 @@ import CollectionModal from './CollectionModal';
 import {
   useFolders, useCollections, useTags, useTagCategories,
   useCreateFolder, useUpdateFolder, useDeleteFolder,
-  useCreateCollection, useUpdateCollection, useDeleteCollection,
-  useCreateTag, useUpdateTag, useDeleteTag
+  useCreateCollection, useUpdateCollection, useDeleteCollection
 } from '../hooks/useApi';
 import {
   FolderId,
   CollectionId,
   Folder,
   Collection,
-  MediaItem,
   ViewMode,
-  HexColor,
-  MouseEvent
+  HexColor
 } from '../types';
+import { NavigationView } from '../contexts/NavigationContext';
 import { useNavigation, useUIState } from '../contexts';
 
 // Component props interface - now simplified since most props come from context
@@ -85,8 +83,6 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   // Core state
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['1', '2', '3']); // Default expanded folders
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [smartCollections, setSmartCollections] = useState<Collection[]>([]);
-  const [folderData, setFolderData] = useState<Folder[]>([]);
   
   // Folder management state
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
@@ -114,20 +110,20 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   
   // Fetch data using hooks
-  const { data: folders, loading: foldersLoading, error: foldersError, refetch: refetchFolders } = useFolders();
+  const { data: folders, refetch: refetchFolders } = useFolders();
   const { data: collections, loading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useCollections();
   const { data: tags, loading: tagsLoading, error: tagsError, refetch: refetchTags } = useTags();
   const { data: tagCategories } = useTagCategories();
   
   // Folder operation hooks
-  const { mutate: createFolder, loading: createFolderLoading } = useCreateFolder();
-  const { mutate: updateFolder, loading: updateFolderLoading } = useUpdateFolder();
-  const { mutate: deleteFolder, loading: deleteFolderLoading } = useDeleteFolder();
+  const { mutate: createFolder } = useCreateFolder();
+  const { mutate: updateFolder } = useUpdateFolder();
+  const { mutate: deleteFolder } = useDeleteFolder();
   
   // Collection operation hooks
-  const { mutate: createCollection, loading: createCollectionLoading } = useCreateCollection();
-  const { mutate: updateCollection, loading: updateCollectionLoading } = useUpdateCollection();
-  const { mutate: deleteCollection, loading: deleteCollectionLoading } = useDeleteCollection();
+  const { mutate: createCollection } = useCreateCollection();
+  const { mutate: updateCollection } = useUpdateCollection();
+  const { mutate: deleteCollection } = useDeleteCollection();
   
   // Toggle folder expansion
   const toggleFolder = (folderId: string): void => {
@@ -139,8 +135,12 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   };
   
   // Set view and folder
-  const handleSmartFolderClick = (view: ViewMode | string): void => {
-    setCurrentView(view as ViewMode);
+  const handleSmartFolderClick = (specialFolder: string): void => {
+    // Navigate to special folder view
+    setCurrentView('folder' as NavigationView);
+    if (onFolderSelected) {
+      onFolderSelected(specialFolder);
+    }
   };
   
   // Render loading state
@@ -260,7 +260,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
     if (!selectedFolderForAction) return;
     
     try {
-      await deleteFolder({ id: selectedFolderForAction.id, options: { force: true } });
+      await deleteFolder({ id: selectedFolderForAction.id, options: { deleteChildren: true } });
       
       // Refresh folder list
       refetchFolders();
@@ -489,11 +489,11 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
                   currentView === 'folder' && currentFolder === 'all' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => {
-                  setCurrentView('folder');
+                  setCurrentView('folder' as NavigationView);
                   if (onFolderSelected) {
                     onFolderSelected('all');
                   } else {
-                    navigateToFolder('all');
+                    navigateToFolder(null);
                   }
                 }}
               >
@@ -502,7 +502,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
               </button>
               <button 
                 className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                  currentView === 'recent' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                  currentFolder === 'recent' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => handleSmartFolderClick('recent')}
               >
@@ -511,7 +511,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
               </button>
               <button 
                 className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                  currentView === 'starred' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                  currentFolder === 'starred' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => handleSmartFolderClick('starred')}
               >
@@ -520,7 +520,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
               </button>
               <button 
                 className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                  currentView === 'favorites' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                  currentFolder === 'favorites' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => handleSmartFolderClick('favorites')}
               >
@@ -529,7 +529,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
               </button>
               <button 
                 className={`w-full text-left px-2 py-1.5 rounded-md flex items-center space-x-2 text-sm ${
-                  currentView === 'shared' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                  currentFolder === 'shared' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
                 }`}
                 onClick={() => handleSmartFolderClick('shared')}
               >
@@ -588,14 +588,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
             ) : collectionsError ? (
               renderError(collectionsError.message)
             ) : (
-              <CollectionNavigation
-                collections={collections?.items || []}
-                currentCollection={currentCollection}
-                onCollectionClick={navigateToCollection}
-                onCreateCollection={handleCreateCollection}
-                onUpdateCollection={handleUpdateCollection}
-                onDeleteCollection={handleDeleteCollection}
-              />
+              <CollectionNavigation />
             )}
             
             {selectedTags.length > 0 && (
@@ -805,8 +798,8 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
         onConfirm={handleDeleteFolder}
         title="Delete Folder"
         message={`Are you sure you want to delete "${selectedFolderForAction?.name}"? This action cannot be undone.`}
-        confirmButtonText="Delete"
-        confirmButtonColor="red"
+        confirmText="Delete"
+        type="error"
       />
       
       {/* Folder context menu */}

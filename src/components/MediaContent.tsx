@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, Tag, Plus, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, AlertCircle } from 'lucide-react';
 import MediaItem from './MediaItem';
 import { useMedia, useFolders, useCollections, useAddItemsToCollection, useFolderContents } from '../hooks/useApi';
 import TagSelector from './TagSelector';
@@ -756,7 +756,7 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
                     level={0}
                     currentFolder={currentFolder}
                     allFolders={foldersData || []}
-                    onFolderClick={onFolderClick}
+                    onFolderClick={onFolderClick!}
                   />
                 ))}
               </div>
@@ -1146,7 +1146,7 @@ const FolderTreeItem: React.FC<FolderTreeItemProps> = ({ folder, level, currentF
               level={level + 1}
               currentFolder={currentFolder}
               allFolders={allFolders}
-              onFolderClick={onFolderClick}
+              onFolderClick={onFolderClick!}
             />
           ))}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ConfirmationDialog from './ConfirmationDialog';
 import { 
   Copy, 
@@ -83,7 +83,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   const [operationType, setOperationType] = useState<OperationType>(null);
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string>('');
-  const [operationResult, setOperationResult] = useState<'success' | 'error' | null>(null);
+  const [operationResult] = useState<'success' | 'error' | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   
   // Folder selection

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ChevronDown, Loader, Filter } from 'lucide-react';
+import { X, ChevronDown, Loader } from 'lucide-react';
 import { useTags } from '../hooks/useApi';
 import { useFilter } from '../contexts';
 import { useUIState } from '../contexts/UIStateContext';

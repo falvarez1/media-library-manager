@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import storage from '../utils/storage';
 import { useUIState } from '../contexts/UIStateContext';
 import { Menu, Upload, Folders, Search, Filter, Bell, User, KeyboardIcon, Settings } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
 import MediaErrorBoundary from './MediaErrorBoundary';
 import SidebarErrorBoundary from './SidebarErrorBoundary';
-import LoadingSpinner from './LoadingSpinner';
 import { useErrorRecovery } from '../hooks/useErrorRecovery';
 import FolderModal from './FolderModal';
 import FolderNavigation from './FolderNavigation';
@@ -90,7 +89,7 @@ interface CollectionFormData {
 
 const App: React.FC = () => {
   // Error recovery and network monitoring
-  const { isOnline, executeWithRecovery, errorCount } = useErrorRecovery({
+  const { isOnline, errorCount } = useErrorRecovery({
     enableOfflineDetection: true,
     enableRetryMechanism: true,
     enableNetworkMonitoring: true,
@@ -138,7 +137,7 @@ const App: React.FC = () => {
   // showDetails is now managed by UIStateContext
   const [showQuickView, setShowQuickView] = useState<boolean>(false);
   const [quickViewItem, setQuickViewItem] = useState<MediaId | null>(null);
-  const [visibleMediaIds, setVisibleMediaIds] = useState<MediaId[]>([]);
+  const [visibleMediaIds] = useState<MediaId[]>([]);
   const [showImageEditor, setShowImageEditor] = useState<boolean>(false);
   
   // Track starred and favorited items locally
@@ -283,19 +282,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddToCollection = (data: { name: string; items: MediaId[]; }): void => {
-    // Convert the simple data to CollectionFormData format
-    const collectionData: CollectionFormData = {
-      name: data.name,
-      description: '',
-      color: '#6366f1',
-      isShared: false,
-      parentId: null,
-      sharedWith: []
-    };
-    
-    handleCreateCollection(collectionData);
-  };
+  // handleAddToCollection removed - unused
   
   
   // Handle search
@@ -379,7 +366,7 @@ const App: React.FC = () => {
   
   // File operations
   
-  const [allMediaItems, setAllMediaItems] = useState<MediaId[]>([]);
+  const [allMediaItems] = useState<MediaId[]>([]);
   
   const handleSelectAll = (): void => {
     // Select all currently visible media items
@@ -461,7 +448,7 @@ const App: React.FC = () => {
   // Handle star toggle
   const handleToggleStar = async (mediaId: MediaId): Promise<void> => {
     // Optimistic update
-    setStarredItems(prev => {
+    setStarredItems((prev: Set<MediaId>) => {
       const newSet = new Set(prev);
       if (newSet.has(mediaId)) {
         newSet.delete(mediaId);
@@ -478,7 +465,7 @@ const App: React.FC = () => {
   // Handle favorite toggle
   const handleToggleFavorite = async (mediaId: MediaId): Promise<void> => {
     // Optimistic update
-    setFavoritedItems(prev => {
+    setFavoritedItems((prev: Set<MediaId>) => {
       const newSet = new Set(prev);
       if (newSet.has(mediaId)) {
         newSet.delete(mediaId);
@@ -718,8 +705,6 @@ const App: React.FC = () => {
             currentFolder={currentFolder as FolderId}
             currentCollection={currentCollection}
             searchTerm={searchTerm}
-            filters={filters}
-            filterActive={filterActive}
             selectedMedia={selectedMedia as MediaId[]}
             onSelect={handleMediaSelect}
             onQuickView={handleQuickView}
@@ -731,10 +716,6 @@ const App: React.FC = () => {
             collections={collectionsData?.items as Collection[] || []}
             tags={tagsData || []}
             onUpdateCollection={handleUpdateCollection}
-            onAddToCollection={handleAddToCollection}
-            onMediaItemsChange={setVisibleMediaIds}
-            starredItems={starredItems}
-            favoritedItems={favoritedItems}
           />
         </ErrorBoundary>
         

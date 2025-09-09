@@ -5,7 +5,7 @@
  * and accessibility features. Provides smooth loading transitions and fallbacks.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Image, AlertCircle } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -455,5 +455,5 @@ export function useProgressiveImage(src: string, lazy = false) {
 // ============================================================================
 
 export default ProgressiveImage;
-export { ProgressiveAvatar, ProgressiveThumbnail, ProgressiveHero };
+
 export type { ProgressiveImageProps, ImageLoadingState };

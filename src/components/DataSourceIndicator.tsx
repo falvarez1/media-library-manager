@@ -32,7 +32,7 @@ const DataSourceIndicator: React.FC<DataSourceIndicatorProps> = ({
   testId 
 }) => {
   const { isUsingRealApi, dataSource, apiBaseUrl, config } = useDataSource();
-  const typedConfig = config as DataSourceConfig;
+  const typedConfig = config as unknown as DataSourceConfig;
 
   return (
     <div 

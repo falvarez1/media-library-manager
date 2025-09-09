@@ -27,6 +27,18 @@ export const DetailsSidebarWrapper: React.FC = () => {
     <DetailsSidebar
       mediaId={selectedMediaId as MediaId}
       onClose={() => setDetailsVisible(false)}
+      onOpenEditor={() => {
+        // TODO: Implement editor opening
+        console.log('Open editor for media:', selectedMediaId);
+      }}
+      onToggleStar={async () => {
+        // TODO: Implement star toggle
+        console.log('Toggle star for media:', selectedMediaId);
+      }}
+      onToggleFavorite={async () => {
+        // TODO: Implement favorite toggle
+        console.log('Toggle favorite for media:', selectedMediaId);
+      }}
     />
   );
 };
