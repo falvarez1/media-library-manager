@@ -189,6 +189,16 @@ export const useMedia = (
 ): UseApiReturn<PaginatedData<MediaItem> | null> => {
   const executeApi = useCallback(async (): Promise<ApiResponse<PaginatedData<MediaItem>>> => {
     // API takes MediaQuery options which may include folder
+    // Check if api.media exists and has the method
+    if (!api.media || typeof api.media.getMedia !== 'function') {
+      console.error('API structure:', { 
+        api, 
+        media: api.media,
+        mediaKeys: api.media ? Object.keys(api.media) : 'media is undefined',
+        getMediaType: api.media?.getMedia ? typeof api.media.getMedia : 'undefined'
+      });
+      throw new Error('api.media.getMedia is not available');
+    }
     const response = await api.media.getMedia(options);
     
     // Transform PaginatedResponse to expected format

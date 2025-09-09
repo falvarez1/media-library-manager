@@ -502,4 +502,3 @@ export const TOAST_ANIMATIONS_CSS = `
 
 export default NotificationToast;
 export type { ToastProps, NotificationContainerProps };
-export { TOAST_ANIMATIONS_CSS };

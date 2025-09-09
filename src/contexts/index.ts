@@ -122,47 +122,52 @@ export type {
 /**
  * All navigation-related exports
  */
+import * as NavigationContextModule from './NavigationContext';
 export const Navigation = {
-  Provider: require('./NavigationContext').NavigationProvider,
-  useNavigation: require('./NavigationContext').useNavigation,
-  useIsMediaSelected: require('./NavigationContext').useIsMediaSelected,
-  useSelectionCount: require('./NavigationContext').useSelectionCount,
-  useNavigationBreadcrumbs: require('./NavigationContext').useNavigationBreadcrumbs
+  Provider: NavigationContextModule.NavigationProvider,
+  useNavigation: NavigationContextModule.useNavigation,
+  useIsMediaSelected: NavigationContextModule.useIsMediaSelected,
+  useSelectionCount: NavigationContextModule.useSelectionCount,
+  useNavigationBreadcrumbs: NavigationContextModule.useNavigationBreadcrumbs
 } as const;
 
 /**
  * All filter-related exports
  */
+import * as FilterContextModule from './FilterContext';
 export const Filter = {
-  Provider: require('./FilterContext').FilterProvider,
-  useFilter: require('./FilterContext').useFilter
+  Provider: FilterContextModule.FilterProvider,
+  useFilter: FilterContextModule.useFilter
 } as const;
 
 /**
  * All UI state-related exports
  */
+import * as UIStateContextModule from './UIStateContext';
 export const UIState = {
-  Provider: require('./UIStateContext').UIStateProvider,
-  useUIState: require('./UIStateContext').useUIState
+  Provider: UIStateContextModule.UIStateProvider,
+  useUIState: UIStateContextModule.useUIState
 } as const;
 
 /**
  * All user-related exports
  */
+import * as UserContextModule from './UserContext';
 export const User = {
-  Provider: require('./UserContext').UserProvider,
-  useUser: require('./UserContext').useUser
+  Provider: UserContextModule.UserProvider,
+  useUser: UserContextModule.useUser
 } as const;
 
 /**
  * All media operations-related exports
  */
+import * as MediaOperationsContextModule from './MediaOperationsContext';
 export const MediaOperations = {
-  Provider: require('./MediaOperationsContext').MediaOperationsProvider,
-  useMediaOperations: require('./MediaOperationsContext').useMediaOperations,
-  useIsMediaBeingOperated: require('./MediaOperationsContext').useIsMediaBeingOperated,
-  useActiveOperationsCount: require('./MediaOperationsContext').useActiveOperationsCount,
-  useOperationsByType: require('./MediaOperationsContext').useOperationsByType
+  Provider: MediaOperationsContextModule.MediaOperationsProvider,
+  useMediaOperations: MediaOperationsContextModule.useMediaOperations,
+  useIsMediaBeingOperated: MediaOperationsContextModule.useIsMediaBeingOperated,
+  useActiveOperationsCount: MediaOperationsContextModule.useActiveOperationsCount,
+  useOperationsByType: MediaOperationsContextModule.useOperationsByType
 } as const;
 
 // ============================================================================

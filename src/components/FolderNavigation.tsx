@@ -86,7 +86,7 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['1', '2', '3']); // Default expanded folders
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [smartCollections, setSmartCollections] = useState<Collection[]>([]);
-  const [folderData, setFolderData] = useState<Folder[]>(mockFolders as Folder[]);
+  const [folderData, setFolderData] = useState<Folder[]>([]);
   
   // Folder management state
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);

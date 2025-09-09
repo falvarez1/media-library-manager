@@ -17,7 +17,7 @@ import FileOperationsToolbar from './FileOperationsToolbar';
 import AdvancedSearch from './AdvancedSearch';
 import KeyboardShortcuts, { useKeyboardShortcuts, KeyboardShortcutsModal } from './KeyboardShortcuts';
 import UserPreferences from './UserPreferences';
-import ApiModeToggle from './ApiModeToggle';
+import DevToolsMenu from './DevToolsMenu';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import NotificationToast from './NotificationToast';
 import NotificationDemo from './NotificationDemo';
@@ -170,6 +170,7 @@ const App: React.FC = () => {
   );
   
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [showNotificationDemo, setShowNotificationDemo] = useState<boolean>(false);
   
   // Fetch collections data
   const { data: collectionsData, refetch: refetchCollections } = useCollections();
@@ -869,15 +870,20 @@ const App: React.FC = () => {
         }}
       />
       
-        {/* API Mode Toggle - Development only */}
-        {process.env.NODE_ENV === 'development' && <ApiModeToggle />}
+        {/* Development Tools Menu - Development only */}
+        {process.env.NODE_ENV === 'development' && (
+          <DevToolsMenu 
+            showNotificationDemo={showNotificationDemo}
+            onToggleNotificationDemo={setShowNotificationDemo}
+          />
+        )}
         </div>
         
         {/* Notification Toast Container */}
         <NotificationToast />
         
         {/* Notification Demo - Development only */}
-        {process.env.NODE_ENV === 'development' && <NotificationDemo />}
+        {process.env.NODE_ENV === 'development' && showNotificationDemo && <NotificationDemo />}
         </KeyboardShortcuts>
       </NotificationProvider>
     </ErrorBoundary>

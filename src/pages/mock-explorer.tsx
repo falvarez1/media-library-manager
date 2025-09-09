@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   useApi, 
   useDataSource 
@@ -76,9 +75,10 @@ interface ApiTest {
 
 // Main mock explorer component
 const MockDataExplorer: React.FC = () => {
-  const router = useRouter();
-  const { section = 'overview', id = null } = router.query;
-  const [activeTab, setActiveTab] = useState<string>(section as string);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = searchParams.get('section') || 'overview';
+  const id = searchParams.get('id');
+  const [activeTab, setActiveTab] = useState<string>(section);
 
   // Update active tab when URL query changes
   useEffect(() => {
@@ -89,10 +89,7 @@ const MockDataExplorer: React.FC = () => {
 
   // Change URL when tab changes
   const handleTabChange = (tab: string): void => {
-    router.push({
-      pathname: '/mock-explorer',
-      query: { section: tab }
-    }, undefined, { shallow: true });
+    setSearchParams({ section: tab });
   };
 
   return (
@@ -281,7 +278,7 @@ const DataCard: React.FC<DataCardProps> = ({ title, count, description, link }) 
       <p className="text-gray-500 mt-1 mb-4">{description}</p>
       {link && (
         <Link 
-          href={link.href}
+          to={link.href}
           className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
         >
           {link.label}
@@ -311,7 +308,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({ mediaId }) => {
       <div>
         <div className="mb-4">
           <Link 
-            href="/mock-explorer?section=media"
+            to="/mock-explorer?section=media"
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -441,10 +438,10 @@ const MediaSection: React.FC<MediaSectionProps> = ({ mediaId }) => {
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Media Items</h2>
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {mediaList?.items.map((item: any) => (
+        {(mediaList?.data || mediaList?.items || []).map((item: any) => (
           <Link 
             key={item.id}
-            href={`/mock-explorer?section=media&id=${item.id}`}
+            to={`/mock-explorer?section=media&id=${item.id}`}
             className="group block"
           >
             <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
@@ -499,7 +496,7 @@ const FoldersSection: React.FC<FoldersSectionProps> = ({ folderId }) => {
       <div>
         <div className="mb-4">
           <Link 
-            href="/mock-explorer?section=folders"
+            to="/mock-explorer?section=folders"
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -533,7 +530,7 @@ const FoldersSection: React.FC<FoldersSectionProps> = ({ folderId }) => {
               {folderContent.contents.items.map((item: any) => (
                 <Link 
                   key={item.id}
-                  href={`/mock-explorer?section=media&id=${item.id}`}
+                  to={`/mock-explorer?section=media&id=${item.id}`}
                   className="group block"
                 >
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
@@ -619,7 +616,7 @@ const FolderTreeItem: React.FC<FolderTreeItemProps> = ({ folder, level }) => {
         </div>
         
         <div className="flex-1">
-          <Link href={`/mock-explorer?section=folders&id=${folder.id}`} className="hover:text-blue-600">
+          <Link to={`/mock-explorer?section=folders&id=${folder.id}`} className="hover:text-blue-600">
             {folder.name}
           </Link>
         </div>
@@ -661,7 +658,7 @@ const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId })
       <div>
         <div className="mb-4">
           <Link 
-            href="/mock-explorer?section=collections"
+            to="/mock-explorer?section=collections"
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -740,7 +737,7 @@ const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId })
               {collectionContent.contents.items.map((item: any) => (
                 <Link 
                   key={item.id}
-                  href={`/mock-explorer?section=media&id=${item.id}`}
+                  to={`/mock-explorer?section=media&id=${item.id}`}
                   className="group block"
                 >
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
@@ -777,10 +774,10 @@ const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId })
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Collections</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {collections?.items.map((collection: any) => (
+        {(collections?.data || collections?.items || collections || []).map((collection: any) => (
           <Link 
             key={collection.id}
-            href={`/mock-explorer?section=collections&id=${collection.id}`}
+            to={`/mock-explorer?section=collections&id=${collection.id}`}
             className="block bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
           >
             <div 
@@ -833,7 +830,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({ tagId }) => {
       <div>
         <div className="mb-4">
           <Link 
-            href="/mock-explorer?section=tags"
+            to="/mock-explorer?section=tags"
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -867,7 +864,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({ tagId }) => {
               {(tagMedia.media.items || tagMedia.media).map((item: any) => (
                 <Link 
                   key={item.id}
-                  href={`/mock-explorer?section=media&id=${item.id}`}
+                  to={`/mock-explorer?section=media&id=${item.id}`}
                   className="group block"
                 >
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
@@ -909,7 +906,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({ tagId }) => {
             {tags?.map((tag: any) => (
               <Link 
                 key={tag.id}
-                href={`/mock-explorer?section=tags&id=${tag.id}`}
+                to={`/mock-explorer?section=tags&id=${tag.id}`}
                 className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-gray-50 border border-gray-200 transition-colors"
                 style={{ backgroundColor: `${tag.color}10`, borderColor: `${tag.color}30` }}
               >
@@ -947,7 +944,7 @@ const UsersSection: React.FC<UsersSectionProps> = ({ userId }) => {
       <div>
         <div className="mb-4">
           <Link 
-            href="/mock-explorer?section=users"
+            to="/mock-explorer?section=users"
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -1026,7 +1023,7 @@ const UsersSection: React.FC<UsersSectionProps> = ({ userId }) => {
                       return folder ? (
                         <Link 
                           key={folderId}
-                          href={`/mock-explorer?section=folders&id=${folderId}`}
+                          to={`/mock-explorer?section=folders&id=${folderId}`}
                           className="flex items-center py-1 px-2 rounded hover:bg-gray-50"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke={folder.color} strokeWidth={2}>
@@ -1047,7 +1044,7 @@ const UsersSection: React.FC<UsersSectionProps> = ({ userId }) => {
                       return file ? (
                         <Link 
                           key={fileId}
-                          href={`/mock-explorer?section=media&id=${fileId}`}
+                          to={`/mock-explorer?section=media&id=${fileId}`}
                           className="flex items-center py-1 px-2 rounded hover:bg-gray-50"
                         >
                           <div className="w-5 h-5 mr-2 bg-gray-100 rounded overflow-hidden flex-shrink-0">
@@ -1083,7 +1080,7 @@ const UsersSection: React.FC<UsersSectionProps> = ({ userId }) => {
         {users?.map((user: any) => (
           <Link 
             key={user.id}
-            href={`/mock-explorer?section=users&id=${user.id}`}
+            to={`/mock-explorer?section=users&id=${user.id}`}
             className="block bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
           >
             <div className="p-4 flex items-center">

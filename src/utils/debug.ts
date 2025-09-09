@@ -6,7 +6,7 @@
 /**
  * Check if code is running in development environment
  */
-const isDevelopment: boolean = process.env.NODE_ENV === 'development';
+const isDevelopment: boolean = import.meta.env.MODE === 'development';
 
 /**
  * Check if debug mode is enabled via localStorage or environment variable
@@ -17,7 +17,7 @@ const isDebugEnabled = (): boolean => {
   
   try {
     return localStorage.getItem('DEBUG_MODE') === 'true' || 
-           process.env.NEXT_PUBLIC_DEBUG === 'true';
+           import.meta.env.VITE_DEBUG === 'true';
   } catch {
     return false;
   }

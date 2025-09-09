@@ -10,7 +10,6 @@
  * 3. Local storage (for client-side persistence of user preferences)
  */
 
-import getConfig from 'next/config';
 import storage from '../utils/storage';
 
 // ============================================================================
@@ -88,20 +87,18 @@ interface DataSourceConfig {
 }
 
 /**
- * Next.js runtime configuration structure
+ * Vite runtime configuration structure
  */
 interface RuntimeConfig {
-  publicRuntimeConfig?: {
-    apiConfig?: {
-      useRealApi?: boolean;
-      apiBaseUrl?: string;
-    };
-    mockConfig?: {
-      delayMin?: number;
-      delayMax?: number;
-      delayFixed?: number | null;
-      errorRate?: number;
-    };
+  apiConfig?: {
+    useRealApi?: boolean;
+    apiBaseUrl?: string;
+  };
+  mockConfig?: {
+    delayMin?: number;
+    delayMax?: number;
+    delayFixed?: number | null;
+    errorRate?: number;
   };
 }
 
@@ -109,10 +106,20 @@ interface RuntimeConfig {
 // CONFIGURATION UTILITIES
 // ============================================================================
 
-// Get Next.js runtime configuration
-const nextConfig: RuntimeConfig = getConfig() || {};
-const { publicRuntimeConfig = {} } = nextConfig;
-const { apiConfig = {}, mockConfig = {} } = publicRuntimeConfig;
+// Get Vite runtime configuration from environment variables
+const runtimeConfig: RuntimeConfig = {
+  apiConfig: {
+    useRealApi: import.meta.env.VITE_USE_REAL_API === 'true',
+    apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5005'
+  },
+  mockConfig: {
+    delayMin: parseInt(import.meta.env.VITE_MOCK_DELAY_MIN || '200', 10),
+    delayMax: parseInt(import.meta.env.VITE_MOCK_DELAY_MAX || '800', 10),
+    delayFixed: import.meta.env.VITE_MOCK_DELAY_FIXED ? parseInt(import.meta.env.VITE_MOCK_DELAY_FIXED, 10) : null,
+    errorRate: parseFloat(import.meta.env.VITE_MOCK_ERROR_RATE || '0.05')
+  }
+};
+const { apiConfig = {}, mockConfig = {} } = runtimeConfig;
 
 /**
  * Utility function to get config value with priority:
@@ -268,11 +275,11 @@ const config: ServiceConfig = {
  * Environment-specific configuration
  */
 export const ENV_CONFIG = {
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
-  apiVersion: process.env.NEXT_PUBLIC_API_VERSION || 'v1',
-  appVersion: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'
+  isDevelopment: import.meta.env.MODE === 'development',
+  isProduction: import.meta.env.MODE === 'production',
+  isTest: import.meta.env.MODE === 'test',
+  apiVersion: import.meta.env.VITE_API_VERSION || 'v1',
+  appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0'
 } as const;
 
 /**

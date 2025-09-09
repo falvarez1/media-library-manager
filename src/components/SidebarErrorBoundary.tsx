@@ -12,7 +12,7 @@ import {
   RefreshCw, 
   ChevronLeft,
   Folder,
-  Collection,
+  Library,
   Tags,
   X
 } from 'lucide-react';
@@ -53,7 +53,7 @@ function getSidebarSectionIcon(section?: string, size: number = 20) {
     case 'folders':
       return <Folder size={size} />;
     case 'collections':
-      return <Collection size={size} />;
+      return <Library size={size} />;
     case 'tags':
       return <Tags size={size} />;
     case 'navigation':

@@ -6,16 +6,23 @@
  *
  * Configuration can be set through:
  * 1. Environment variables (in .env files or deployment environment)
- * 2. Next.js runtime configuration (in next.config.ts)
+ * 2. Vite runtime configuration (using import.meta.env)
  * 3. Local storage (for client-side persistence of user preferences)
  */
 
-import getConfig from 'next/config';
 import storage from '../utils/storage';
 
-// Get Next.js runtime configuration
-const { publicRuntimeConfig = {} } = getConfig() || {};
-const { apiConfig = {}, mockConfig = {} } = publicRuntimeConfig;
+// Get Vite runtime configuration from environment variables
+const apiConfig = {
+  useRealApi: import.meta.env.VITE_USE_REAL_API === 'true',
+  apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5005'
+};
+const mockConfig = {
+  delayMin: parseInt(import.meta.env.VITE_MOCK_DELAY_MIN || '200', 10),
+  delayMax: parseInt(import.meta.env.VITE_MOCK_DELAY_MAX || '800', 10),
+  delayFixed: import.meta.env.VITE_MOCK_DELAY_FIXED ? parseInt(import.meta.env.VITE_MOCK_DELAY_FIXED, 10) : null,
+  errorRate: parseFloat(import.meta.env.VITE_MOCK_ERROR_RATE || '0.05')
+};
 
 // Utility function to get config value with priority:
 // 1. Local storage (if available)
