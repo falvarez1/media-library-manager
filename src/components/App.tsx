@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import storage from '../utils/storage';
 import { useUIState } from '../contexts/UIStateContext';
-import { useNavigation } from '../contexts/NavigationContext';
-import { Menu, Upload, Folders, Search, Filter, Bell, User, X, KeyboardIcon, Settings, HelpCircle } from 'lucide-react';
+import { Menu, Upload, Folders, Search, Filter, Bell, User, KeyboardIcon, Settings } from 'lucide-react';
+import ErrorBoundary from './ErrorBoundary';
+import MediaErrorBoundary from './MediaErrorBoundary';
+import SidebarErrorBoundary from './SidebarErrorBoundary';
+import LoadingSpinner from './LoadingSpinner';
+import { useErrorRecovery } from '../hooks/useErrorRecovery';
 import FolderModal from './FolderModal';
 import FolderNavigation from './FolderNavigation';
 import MediaContent from './MediaContent';
@@ -13,20 +17,23 @@ import FileOperationsToolbar from './FileOperationsToolbar';
 import AdvancedSearch from './AdvancedSearch';
 import KeyboardShortcuts, { useKeyboardShortcuts, KeyboardShortcutsModal } from './KeyboardShortcuts';
 import UserPreferences from './UserPreferences';
-import ContextDebugger from './ContextDebugger';
 import ApiModeToggle from './ApiModeToggle';
+import { NotificationProvider } from '../contexts/NotificationContext';
+import NotificationToast from './NotificationToast';
+import NotificationDemo from './NotificationDemo';
 import {
-  useCreateFolder, useMedia, useCollections, useCreateCollection,
-  useUpdateCollection, useDeleteCollection, useTags, useMoveMedia,
-  useCopyMedia, useExportMedia, useShareMedia, useBatchUpdateTags
+  useCreateFolder, useCollections, useCreateCollection,
+  useUpdateCollection, useTags
 } from '../hooks/useApi';
 import FilterBar from './FilterBar';
 import CollectionModal from './CollectionModal';
+import UploadModal from './UploadModal';
 import type {
   MediaId,
   FolderId,
   CollectionId,
   TagId,
+  UserId,
   HexColor,
   MediaFilterOptions,
   Collection,
@@ -34,9 +41,7 @@ import type {
   SortField,
   SortOrder,
   MediaType,
-  ChangeEvent,
-  MouseEvent,
-  KeyboardEvent
+  ChangeEvent
 } from '../types';
 
 interface UserPreferences {
@@ -74,36 +79,35 @@ interface AdvancedSearchParams {
   dateEnd?: string;
 }
 
-interface ExportOptions {
-  format?: string;
-  quality?: number;
-  includeMetadata?: boolean;
-}
-
-interface ShareOptions {
-  permissions?: string[];
-  expiry?: string;
-  password?: string;
-}
-
-interface OperationResult {
-  success: boolean;
-  message?: string;
-  data?: any;
+interface CollectionFormData {
+  name: string;
+  description: string;
+  color: string;
+  isShared: boolean;
+  parentId: CollectionId | null;
+  sharedWith?: string[];
 }
 
 const App: React.FC = () => {
+  // Error recovery and network monitoring
+  const { isOnline, executeWithRecovery, errorCount } = useErrorRecovery({
+    enableOfflineDetection: true,
+    enableRetryMechanism: true,
+    enableNetworkMonitoring: true,
+    enableErrorReporting: true,
+    retryOptions: {
+      maxRetries: 3,
+      initialDelay: 1000,
+      maxDelay: 10000
+    }
+  });
+
   // FORCING LOCAL STATE because context isn't working
   const [showDetailsLocal, setShowDetailsLocal] = useState<boolean>(false);
   
   // Get context values (but we'll ignore showDetails from context)
   const { 
-    showSidebar, 
-    setSidebarVisible: setShowSidebar,
-    showDetails: _showDetailsFromContext,
-    setDetailsVisible: _setDetailsFromContext,
-    sidebarTab,
-    setSidebarTab,
+    showSidebar,
     toggleSidebar
   } = useUIState();
   
@@ -111,8 +115,6 @@ const App: React.FC = () => {
   const showDetails = showDetailsLocal;
   const setShowDetails = setShowDetailsLocal;
   
-  // Navigation context doesn't have these - commenting out for now
-  // const { } = useNavigation();
   
   // Local state (will be migrated to contexts)
   const [currentView, setCurrentView] = useState<'folder' | 'collection' | 'search'>('folder');
@@ -142,13 +144,13 @@ const App: React.FC = () => {
   // Track starred and favorited items locally
   const [starredItems, setStarredItems] = useState<Set<MediaId>>(new Set());
   const [favoritedItems, setFavoritedItems] = useState<Set<MediaId>>(new Set());
-  const [showUploader, setShowUploader] = useState<boolean>(false);
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
   const [showNewCollectionModal, setShowNewCollectionModal] = useState<boolean>(false);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState<boolean>(false);
   const [showUserPreferences, setShowUserPreferences] = useState<boolean>(false);
+  const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [mediaSelectionMode, setMediaSelectionMode] = useState<boolean>(false);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [sortBy, setSortBy] = useState<SortField>('name');
@@ -170,22 +172,14 @@ const App: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   
   // Fetch collections data
-  const { data: collectionsData, loading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useCollections();
+  const { data: collectionsData, refetch: refetchCollections } = useCollections();
   
   // Fetch tags data
-  const { data: tagsData, loading: tagsLoading, error: tagsError } = useTags();
+  const { data: tagsData } = useTags();
   
   // Collection operations
-  const { mutate: createCollection, loading: createCollectionLoading } = useCreateCollection();
-  const { mutate: updateCollection, loading: updateCollectionLoading } = useUpdateCollection();
-  const { mutate: deleteCollection, loading: deleteCollectionLoading } = useDeleteCollection();
-  
-  // Media operations
-  const { mutate: moveMedia, loading: moveLoading } = useMoveMedia();
-  const { mutate: copyMedia, loading: copyLoading } = useCopyMedia();
-  const { mutate: exportMedia, loading: exportLoading } = useExportMedia();
-  const { mutate: shareMedia, loading: shareLoading } = useShareMedia();
-  const { mutate: batchUpdateMedia, loading: batchUpdateLoading } = useBatchUpdateTags();
+  const { mutate: createCollection } = useCreateCollection();
+  const { mutate: updateCollection } = useUpdateCollection();
   
   // Monitor showDetails state changes
   // Removed debug logging
@@ -222,7 +216,7 @@ const App: React.FC = () => {
   };
   
   // Folder operations
-  const { mutate: createFolder, loading: createFolderLoading } = useCreateFolder();
+  const { mutate: createFolder } = useCreateFolder();
   
   const handleCreateFolder = async (name: string): Promise<void> => {
     try {
@@ -256,7 +250,7 @@ const App: React.FC = () => {
   };
   
   // Collection operations
-  const handleCreateCollection = async (collectionData: any): Promise<void> => {
+  const handleCreateCollection = async (collectionData: CollectionFormData): Promise<void> => {
     try {
       await createCollection({
         name: collectionData.name || 'Untitled Collection',
@@ -264,7 +258,7 @@ const App: React.FC = () => {
         color: (collectionData.color || '#6366f1') as HexColor,
         parentId: collectionData.parentId || null,
         isShared: collectionData.isShared || false,
-        sharedWith: collectionData.sharedWith || []
+        sharedWith: (collectionData.sharedWith || []) as UserId[]
       });
       
       // Refresh collections
@@ -287,23 +281,21 @@ const App: React.FC = () => {
       console.error('Failed to update collection:', error);
     }
   };
-  
-  const handleDeleteCollection = async (id: CollectionId): Promise<void> => {
-    try {
-      await deleteCollection({ id, options: { deleteChildren: true } });
-      
-      // Refresh collections
-      refetchCollections();
-      
-      // If the deleted collection was the current one, go back to all media
-      if (currentCollection === id) {
-        setCurrentView('folder');
-        setCurrentFolder('all');
-      }
-    } catch (error) {
-      console.error('Failed to delete collection:', error);
-    }
+
+  const handleAddToCollection = (data: { name: string; items: MediaId[]; }): void => {
+    // Convert the simple data to CollectionFormData format
+    const collectionData: CollectionFormData = {
+      name: data.name,
+      description: '',
+      color: '#6366f1',
+      isShared: false,
+      parentId: null,
+      sharedWith: []
+    };
+    
+    handleCreateCollection(collectionData);
   };
+  
   
   // Handle search
   const handleSearch = (term: string): void => {
@@ -340,8 +332,10 @@ const App: React.FC = () => {
     if (!quickViewItem || visibleMediaIds.length === 0) return;
     
     const currentIndex = visibleMediaIds.indexOf(quickViewItem);
-    if (currentIndex >= 0 && currentIndex < visibleMediaIds.length - 1) {
-      const nextId = visibleMediaIds[currentIndex + 1];
+    if (currentIndex >= 0) {
+      // Wrap around to the first item if at the end
+      const nextIndex = currentIndex < visibleMediaIds.length - 1 ? currentIndex + 1 : 0;
+      const nextId = visibleMediaIds[nextIndex];
       setQuickViewItem(nextId);
     }
   }, [quickViewItem, visibleMediaIds]);
@@ -350,8 +344,10 @@ const App: React.FC = () => {
     if (!quickViewItem || visibleMediaIds.length === 0) return;
     
     const currentIndex = visibleMediaIds.indexOf(quickViewItem);
-    if (currentIndex > 0) {
-      const prevId = visibleMediaIds[currentIndex - 1];
+    if (currentIndex >= 0) {
+      // Wrap around to the last item if at the beginning
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleMediaIds.length - 1;
+      const prevId = visibleMediaIds[prevIndex];
       setQuickViewItem(prevId);
     }
   }, [quickViewItem, visibleMediaIds]);
@@ -372,9 +368,6 @@ const App: React.FC = () => {
     }
   };
 
-  const getPreviousMediaId = (currentId: MediaId): MediaId | null => {
-    return null;
-  };
 
   // Open image editor
   const openEditor = (): void => {
@@ -384,46 +377,15 @@ const App: React.FC = () => {
   };
   
   // File operations
-  const handleMoveMedia = async (mediaIds: MediaId[], targetFolderId: FolderId): Promise<void> => {
-    try {
-      await moveMedia({ mediaIds, targetFolderId });
-      // Clear selection and refresh view
-      setSelectedMedia([]);
-    } catch (error) {
-      console.error('Error moving media:', error);
-    }
-  };
   
-  const handleCopyMedia = async (mediaIds: MediaId[], targetFolderId: FolderId): Promise<void> => {
-    try {
-      await copyMedia({ mediaIds, targetFolderId });
-      // Keep selection but refresh view
-    } catch (error) {
-      console.error('Error copying media:', error);
-    }
-  };
-  
-  const handleExportMedia = async (mediaIds: MediaId[], options: ExportOptions = {}): Promise<OperationResult | undefined> => {
-    try {
-      const result = await exportMedia({ mediaIds, options });
-      // Export complete
-      return result;
-    } catch (error) {
-      console.error('Error exporting media:', error);
-    }
-  };
-  
-  const handleShareMedia = async (mediaIds: MediaId[], options: ShareOptions = {}): Promise<OperationResult | undefined> => {
-    try {
-      const result = await shareMedia({ mediaIds, shareOptions: options });
-      // Share link created
-      return result;
-    } catch (error) {
-      console.error('Error sharing media:', error);
-    }
-  };
+  const [allMediaItems, setAllMediaItems] = useState<MediaId[]>([]);
   
   const handleSelectAll = (): void => {
+    // Select all currently visible media items
+    setMediaSelectionMode(true);
+    if (allMediaItems.length > 0) {
+      setSelectedMedia(allMediaItems);
+    }
   };
   
   const handleDeselectAll = (): void => {
@@ -490,13 +452,14 @@ const App: React.FC = () => {
     try {
       const savedSearchesData = storage.get('savedSearches', []);
       setSavedSearches(savedSearchesData);
-    } catch (error) {
+    } catch {
       // Error loading saved searches
     }
   }, []);
   
   // Handle star toggle
   const handleToggleStar = async (mediaId: MediaId): Promise<void> => {
+    // Optimistic update
     setStarredItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(mediaId)) {
@@ -506,12 +469,14 @@ const App: React.FC = () => {
       }
       return newSet;
     });
+    
     // In a real app, we would also make an API call here
-    // await api.media.updateStar(mediaId, !starredItems.has(mediaId));
+    // The state update above handles the UI optimistically
   };
   
   // Handle favorite toggle
   const handleToggleFavorite = async (mediaId: MediaId): Promise<void> => {
+    // Optimistic update
     setFavoritedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(mediaId)) {
@@ -521,8 +486,9 @@ const App: React.FC = () => {
       }
       return newSet;
     });
+    
     // In a real app, we would also make an API call here
-    // await api.media.updateFavorite(mediaId, !favoritedItems.has(mediaId));
+    // The state update above handles the UI optimistically
   };
   
   // Register keyboard shortcuts
@@ -563,8 +529,24 @@ const App: React.FC = () => {
   ]);
   
   return (
-    <KeyboardShortcuts>
-      <div className="flex flex-col h-screen text-gray-800 bg-gray-50">
+    <ErrorBoundary level="page" name="App">
+      <NotificationProvider position="top-right" maxNotifications={5}>
+        <KeyboardShortcuts>
+          {/* Offline indicator */}
+          {!isOnline && (
+            <div className="bg-red-600 text-white text-center py-2 text-sm">
+              <span>You're currently offline. Some features may not be available.</span>
+            </div>
+          )}
+          
+          {/* Error count indicator (development only) */}
+          {process.env.NODE_ENV === 'development' && errorCount > 0 && (
+            <div className="bg-yellow-500 text-white text-center py-1 text-xs">
+              <span>{errorCount} error(s) detected</span>
+            </div>
+          )}
+          
+          <div className="flex flex-col h-screen text-gray-800 bg-gray-50">
       {/* Top navbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center">
@@ -580,7 +562,7 @@ const App: React.FC = () => {
           <div className="hidden md:flex space-x-2">
             <button 
               className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md flex items-center space-x-1 hover:bg-blue-700"
-              onClick={() => setShowUploader(true)}
+              onClick={() => setShowUploadModal(true)}
             >
               <Upload size={15} />
               <span>Upload</span>
@@ -715,77 +697,110 @@ const App: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar */}
         {showSidebar && (
-          <FolderNavigation 
-            onTagFilter={handleTagFilter}
-            onFolderSelected={handleFolderClick}
-            currentFolder={currentFolder}
-          />
+          <SidebarErrorBoundary 
+            sidebarSection="navigation"
+            isCollapsible={true}
+            onCollapse={toggleSidebar}
+          >
+            <FolderNavigation 
+              onTagFilter={handleTagFilter}
+              onFolderSelected={handleFolderClick}
+              currentFolder={currentFolder}
+            />
+          </SidebarErrorBoundary>
         )}
         
         {/* Main content */}
-        <MediaContent
-          currentView={currentView}
-          currentFolder={currentFolder as FolderId}
-          currentCollection={currentCollection}
-          searchTerm={searchTerm}
-          filters={filters}
-          filterActive={filterActive}
-          selectedMedia={selectedMedia as MediaId[]}
-          onSelect={handleMediaSelect}
-          onQuickView={handleQuickView}
-          onOpenEditor={openEditor}
-          onToggleStar={handleToggleStar}
-          onToggleFavorite={handleToggleFavorite}
-          onFolderClick={handleFolderClick}
-          onCollectionClick={handleCollectionClick}
-          collections={collectionsData?.items as Collection[] || []}
-          tags={tagsData || []}
-          onUpdateCollection={handleUpdateCollection}
-          onAddToCollection={handleCreateCollection}
-          onMediaItemsChange={setVisibleMediaIds}
-          starredItems={starredItems}
-          favoritedItems={favoritedItems}
-        />
+        <ErrorBoundary level="section" name="MediaContent">
+          <MediaContent
+            currentView={currentView}
+            currentFolder={currentFolder as FolderId}
+            currentCollection={currentCollection}
+            searchTerm={searchTerm}
+            filters={filters}
+            filterActive={filterActive}
+            selectedMedia={selectedMedia as MediaId[]}
+            onSelect={handleMediaSelect}
+            onQuickView={handleQuickView}
+            onOpenEditor={openEditor}
+            onToggleStar={handleToggleStar}
+            onToggleFavorite={handleToggleFavorite}
+            onFolderClick={handleFolderClick}
+            onCollectionClick={handleCollectionClick}
+            collections={collectionsData?.items as Collection[] || []}
+            tags={tagsData || []}
+            onUpdateCollection={handleUpdateCollection}
+            onAddToCollection={handleAddToCollection}
+            onMediaItemsChange={setVisibleMediaIds}
+            starredItems={starredItems}
+            favoritedItems={favoritedItems}
+          />
+        </ErrorBoundary>
         
         {/* Details sidebar - FORCED TO WORK */}
         {showDetails && selectedMedia.length === 1 && (
-          <DetailsSidebar 
-            mediaId={selectedMedia[0]}
-            onClose={() => setShowDetails(false)}
-          />
+          <SidebarErrorBoundary 
+            sidebarSection="navigation"
+            isCollapsible={true}
+            onCollapse={() => setShowDetails(false)}
+          >
+            <DetailsSidebar 
+              mediaId={selectedMedia[0]}
+              onClose={() => setShowDetails(false)}
+              onOpenEditor={openEditor}
+              onToggleStar={handleToggleStar}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          </SidebarErrorBoundary>
         )}
       </div>
       
       {/* Modals */}
       {showQuickView && quickViewItem && (() => {
         const currentIndex = visibleMediaIds.indexOf(quickViewItem);
-        const canNavigateNext = currentIndex >= 0 && currentIndex < visibleMediaIds.length - 1;
-        const canNavigatePrevious = currentIndex > 0;
+        // With wrap-around navigation, we can always navigate if there are multiple items
+        const canNavigateNext = visibleMediaIds.length > 1;
+        const canNavigatePrevious = visibleMediaIds.length > 1;
         
         return (
-          <MediaViewer
+          <MediaErrorBoundary 
             mediaId={quickViewItem}
-            onClose={() => setShowQuickView(false)}
-            onShowDetails={() => {
-              setShowDetails(true);
-              setShowQuickView(false);
-            }}
-            onOpenEditor={openEditor}
-            onNavigateNext={handleNavigateNext}
-            onNavigatePrevious={handleNavigatePrevious}
-            onToggleStar={handleToggleStar}
-            onToggleFavorite={handleToggleFavorite}
-            canNavigateNext={canNavigateNext}
-            canNavigatePrevious={canNavigatePrevious}
-          />
+            onSkip={handleNavigateNext}
+            showSkipOption={visibleMediaIds.length > 1}
+            fallbackTitle="Unable to load media viewer"
+          >
+            <MediaViewer
+              mediaId={quickViewItem}
+              onClose={() => setShowQuickView(false)}
+              onShowDetails={() => {
+                setShowDetails(true);
+                setShowQuickView(false);
+              }}
+              onOpenEditor={openEditor}
+              onNavigateNext={handleNavigateNext}
+              onNavigatePrevious={handleNavigatePrevious}
+              onToggleStar={handleToggleStar}
+              onToggleFavorite={handleToggleFavorite}
+              canNavigateNext={canNavigateNext}
+              canNavigatePrevious={canNavigatePrevious}
+              currentIndex={currentIndex + 1} // 1-based index for display
+              totalCount={visibleMediaIds.length}
+            />
+          </MediaErrorBoundary>
         );
       })()}
       
       {showImageEditor && selectedMedia.length === 1 && (
-        <MediaEditor 
+        <MediaErrorBoundary 
           mediaId={selectedMedia[0]}
-          onClose={() => setShowImageEditor(false)}
-        />
+          fallbackTitle="Unable to load media editor"
+          showSkipOption={false}
+        >
+          <MediaEditor 
+            mediaId={selectedMedia[0]}
+            onClose={() => setShowImageEditor(false)}
+          />
+        </MediaErrorBoundary>
       )}
       
       {/* Folder management modals */}
@@ -843,13 +858,29 @@ const App: React.FC = () => {
         onSave={handleSavePreferences}
       />
       
-      {/* Context Debugger - Development only */}
-      {process.env.NODE_ENV === 'development' && <ContextDebugger />}
+      {/* Upload Modal */}
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        currentFolderId={currentFolder}
+        onUploadComplete={(files) => {
+          console.log('Files uploaded:', files);
+          // Here you would typically refresh the media list
+        }}
+      />
       
-      {/* API Mode Toggle - Development only */}
-      {process.env.NODE_ENV === 'development' && <ApiModeToggle />}
-    </div>
-    </KeyboardShortcuts>
+        {/* API Mode Toggle - Development only */}
+        {process.env.NODE_ENV === 'development' && <ApiModeToggle />}
+        </div>
+        
+        {/* Notification Toast Container */}
+        <NotificationToast />
+        
+        {/* Notification Demo - Development only */}
+        {process.env.NODE_ENV === 'development' && <NotificationDemo />}
+        </KeyboardShortcuts>
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 };
 

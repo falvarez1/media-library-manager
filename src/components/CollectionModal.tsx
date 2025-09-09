@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Folder, Plus } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import {
   CollectionId,
-  HexColor,
   BaseComponentProps,
   EventHandler,
   FormEvent,

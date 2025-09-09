@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .vs/*
+
+test-results/*
+test-results/.last-run.json

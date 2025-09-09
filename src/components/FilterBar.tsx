@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, ChevronDown, Loader } from 'lucide-react';
+import { X, ChevronDown, Loader, Filter } from 'lucide-react';
 import { useTags } from '../hooks/useApi';
 import { useFilter } from '../contexts';
+import { useUIState } from '../contexts/UIStateContext';
 import {
   MediaType,
   TagId,
@@ -9,7 +10,14 @@ import {
   ChangeEvent
 } from '../types';
 
-const FilterBar: React.FC = () => {
+interface FilterBarProps {
+  onClose?: () => void;
+  filters?: any;
+  setFilters?: any;
+  setFilterActive?: any;
+}
+
+const FilterBar: React.FC<FilterBarProps> = ({ onClose }) => {
   const { 
     filters, 
     setFilters,
@@ -141,12 +149,14 @@ const FilterBar: React.FC = () => {
           >
             Clear All
           </button>
-          <button 
-            className="text-xs text-gray-500 hover:text-gray-700"
-            onClick={toggleFilterPanel}
-          >
-            <X size={16} />
-          </button>
+          {onClose && (
+            <button 
+              className="text-xs text-gray-500 hover:text-gray-700"
+              onClick={onClose}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
       

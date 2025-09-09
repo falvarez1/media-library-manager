@@ -151,8 +151,6 @@ const KEYBOARD_SHORTCUTS = {
  * UI state reducer for managing all UI-related state updates
  */
 function uiStateReducer(state: UIState, action: UIAction): UIState {
-  console.log('[UIStateReducer] Action dispatched:', action.type, 'payload:', (action as any).payload);
-  console.log('[UIStateReducer] Current state before:', { showDetails: state.showDetails });
   
   switch (action.type) {
     case 'TOGGLE_SIDEBAR':

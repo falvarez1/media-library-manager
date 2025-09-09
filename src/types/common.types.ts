@@ -120,6 +120,9 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: PaginationMeta;
 }
 
+// Alias for compatibility - some components expect PaginatedData
+export type PaginatedData<T> = PaginatedResponse<T>;
+
 // ============================================================================
 // QUERY AND FILTER TYPES
 // ============================================================================

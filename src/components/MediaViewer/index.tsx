@@ -6,7 +6,7 @@
  */
 
 import React, { useReducer, useCallback, useMemo, Suspense, lazy } from 'react';
-import { X, ArrowLeft, ArrowRight, Info, Loader } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, Loader } from 'lucide-react';
 import { useMediaItem } from '../../hooks/useApi';
 import { useMediaKeyboardShortcuts } from './hooks/useMediaKeyboardShortcuts';
 import { usePreloadAdjacentMedia } from './hooks/usePreloadAdjacentMedia';
@@ -34,7 +34,9 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   onToggleStar,
   onToggleFavorite,
   canNavigateNext = true,
-  canNavigatePrevious = true
+  canNavigatePrevious = true,
+  currentIndex,
+  totalCount
 }) => {
   // Fetch media item data
   const { data: item, loading, error } = useMediaItem(mediaId);
@@ -165,6 +167,8 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         onShowDetails={onShowDetails}
         canNavigateNext={canNavigateNext}
         canNavigatePrevious={canNavigatePrevious}
+        currentIndex={currentIndex}
+        totalCount={totalCount}
       />
       
       <div className="flex-1 relative overflow-hidden">

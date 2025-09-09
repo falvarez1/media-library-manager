@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ConfirmationDialog from './ConfirmationDialog';
 import { 
   Copy, 
   FolderInput, 
@@ -83,6 +84,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string>('');
   const [operationResult, setOperationResult] = useState<'success' | 'error' | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   
   // Folder selection
   const { data: folders, loading: foldersLoading } = useFolders({}, []);
@@ -199,6 +201,28 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
     }
   };
   
+  // Handle delete operation
+  const handleDelete = async (): Promise<void> => {
+    if (!selectedMedia || selectedMedia.length === 0) {
+      return;
+    }
+    
+    try {
+      // In a real implementation, you would call the delete API here
+      // For now, we'll just show a success message
+      showOperationMessage(`${selectedMedia.length} item(s) deleted successfully`);
+      setShowDeleteConfirm(false);
+      
+      // Clear selection after delete
+      if (onDeselectAll) {
+        onDeselectAll();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete media';
+      showOperationMessage(`Error: ${errorMessage}`);
+    }
+  };
+  
   // Display operation messages/confirmations
   const showOperationMessage = (message: string): void => {
     setConfirmationMessage(message);
@@ -276,13 +300,13 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
             <div className="flex space-x-1">
               <button
                 className="p-1.5 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
-                onClick={selectAll}
+                onClick={onSelectAll}
               >
                 Select All
               </button>
               <button
                 className="p-1.5 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
-                onClick={deselectAll}
+                onClick={onDeselectAll}
               >
                 Deselect All
               </button>
@@ -332,6 +356,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
             <button
               className="p-1.5 border border-gray-300 rounded-md flex items-center text-red-500 hover:bg-red-50"
               disabled={isLoading}
+              onClick={() => setShowDeleteConfirm(true)}
             >
               <Trash2 size={16} className="mr-1" />
               <span className="text-xs">Delete</span>
@@ -425,6 +450,17 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
           <span>{confirmationMessage}</span>
         </div>
       )}
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Media"
+        message={`Are you sure you want to delete ${selectedMedia.length} selected item${selectedMedia.length !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText="Delete"
+        type="warning"
+      />
     </div>
   );
 };

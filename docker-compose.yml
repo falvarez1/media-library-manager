@@ -66,7 +66,8 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-MediaLibraryManager}
       Jwt__Audience: ${JWT_AUDIENCE:-MediaLibraryUsers}
       Cors__Origins__0: "http://localhost:3015"
-      Cors__Origins__1: "http://frontend:3000"
+      Cors__Origins__1: "http://localhost:${FRONTEND_PORT:-3016}"
+      Cors__Origins__2: "http://frontend:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +86,7 @@ services:
       dockerfile: Dockerfile
     container_name: medialib-frontend
     ports:
-      - "3015:3000"
+      - "${FRONTEND_PORT:-3016}:3000"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5005}

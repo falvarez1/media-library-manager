@@ -14,7 +14,9 @@ const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({
   onNavigate,
   onShowDetails,
   canNavigateNext = true,
-  canNavigatePrevious = true
+  canNavigatePrevious = true,
+  currentIndex,
+  totalCount
 }) => {
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent">
@@ -30,7 +32,7 @@ const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({
         </div>
         
         {/* Center Section - Navigation */}
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-3">
           <button
             onClick={() => canNavigatePrevious && onNavigate('prev')}
             className={`p-2 rounded transition-colors ${
@@ -44,6 +46,13 @@ const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({
           >
             <ArrowLeft size={20} />
           </button>
+          
+          {/* Position Counter */}
+          {currentIndex !== undefined && totalCount !== undefined && totalCount > 1 && (
+            <div className="text-white/80 text-sm font-medium px-2 py-1 rounded bg-white/10 backdrop-blur-sm">
+              {currentIndex} of {totalCount}
+            </div>
+          )}
           
           <button
             onClick={() => canNavigateNext && onNavigate('next')}

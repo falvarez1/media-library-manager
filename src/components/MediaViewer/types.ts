@@ -15,6 +15,8 @@ export interface MediaViewerProps {
   onToggleFavorite?: (mediaId: MediaId) => void;
   canNavigateNext?: boolean;
   canNavigatePrevious?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 export interface MediaViewerHeaderProps {
@@ -24,6 +26,8 @@ export interface MediaViewerHeaderProps {
   onShowDetails?: () => void;
   canNavigateNext?: boolean;
   canNavigatePrevious?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 export interface MediaViewerFooterProps {

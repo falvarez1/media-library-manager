@@ -1,12 +1,6 @@
-// import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import AppWithProviders from '../components/AppWithProviders';
 
-// TEMPORARY: Testing without dynamic import to diagnose context issue
-// const AppWithProviders = dynamic(() => import('../components/AppWithProviders'), { 
-//   ssr: false,
-//   loading: () => <div className="flex items-center justify-center h-screen">Loading...</div>
-// });
 
 export default function Home() {
   return (

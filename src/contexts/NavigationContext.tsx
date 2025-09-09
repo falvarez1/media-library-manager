@@ -37,6 +37,8 @@ export interface NavigationState {
   searchTerm: string;
   /** Array of selected media IDs */
   selectedMedia: MediaId[];
+  /** Currently selected media ID for quick view */
+  selectedMediaId: MediaId | null;
   /** Navigation history for back/forward functionality */
   history: NavigationHistoryItem[];
   /** Current position in navigation history */
@@ -67,6 +69,7 @@ export type NavigationAction =
   | { type: 'SELECT_MEDIA'; payload: MediaId }
   | { type: 'SELECT_MULTIPLE_MEDIA'; payload: MediaId[] }
   | { type: 'TOGGLE_MEDIA_SELECTION'; payload: MediaId }
+  | { type: 'SET_SELECTED_MEDIA_ID'; payload: MediaId | null }
   | { type: 'CLEAR_SELECTION' }
   | { type: 'SET_NAVIGATING'; payload: boolean }
   | { type: 'NAVIGATE_BACK' }
@@ -86,6 +89,7 @@ export interface NavigationContextValue {
   currentCollection: CollectionId | null;
   searchTerm: string;
   selectedMedia: MediaId[];
+  selectedMediaId: MediaId | null;
   isNavigating: boolean;
   
   // History management
@@ -100,6 +104,7 @@ export interface NavigationContextValue {
   selectMedia: (mediaId: MediaId) => void;
   selectMultipleMedia: (mediaIds: MediaId[]) => void;
   toggleMediaSelection: (mediaId: MediaId) => void;
+  setSelectedMediaId: (mediaId: MediaId | null) => void;
   clearSelection: () => void;
   navigateBack: () => void;
   navigateForward: () => void;
@@ -261,10 +266,18 @@ function navigationReducer(
       };
     }
 
+    case 'SET_SELECTED_MEDIA_ID': {
+      return {
+        ...state,
+        selectedMediaId: action.payload
+      };
+    }
+
     case 'CLEAR_SELECTION': {
       return {
         ...state,
-        selectedMedia: []
+        selectedMedia: [],
+        selectedMediaId: null
       };
     }
 
@@ -343,6 +356,7 @@ const defaultNavigationState: NavigationState = {
   currentCollection: null,
   searchTerm: '',
   selectedMedia: [],
+  selectedMediaId: null,
   history: [{
     view: 'folder',
     timestamp: Date.now()
@@ -464,6 +478,13 @@ export function NavigationProvider({
   }, []);
 
   /**
+   * Set selected media ID for quick view
+   */
+  const setSelectedMediaId = useCallback((mediaId: MediaId | null) => {
+    dispatch({ type: 'SET_SELECTED_MEDIA_ID', payload: mediaId });
+  }, []);
+
+  /**
    * Clear all selected media
    */
   const clearSelection = useCallback(() => {
@@ -521,6 +542,7 @@ export function NavigationProvider({
     currentCollection: state.currentCollection,
     searchTerm: state.searchTerm,
     selectedMedia: state.selectedMedia,
+    selectedMediaId: state.selectedMediaId,
     isNavigating: state.isNavigating,
     
     // History state
@@ -535,6 +557,7 @@ export function NavigationProvider({
     selectMedia,
     selectMultipleMedia,
     toggleMediaSelection,
+    setSelectedMediaId,
     clearSelection,
     navigateBack,
     navigateForward,
@@ -550,6 +573,7 @@ export function NavigationProvider({
     selectMedia,
     selectMultipleMedia,
     toggleMediaSelection,
+    setSelectedMediaId,
     clearSelection,
     navigateBack,
     navigateForward,

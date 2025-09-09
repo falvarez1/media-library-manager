@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag } from 'lucide-react';
-import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags } from '../hooks/useApi';
+import { X, History, Edit, Share, Download, Trash2, Star, Heart, CheckCircle, XCircle, Info, Zap, Plus, Eye, ExternalLink, BarChart2, Loader, Folder, Tag, Save, Calendar, AlertCircle } from 'lucide-react';
+import { useMediaItem, useTags, useCollections, useTagSuggestions, useAddItemsToCollection, useRemoveItemsFromCollection, useBatchUpdateTags, useUpdateMediaItem } from '../hooks/useApi';
 import TagSelector from './TagSelector';
 import CollectionModal from './CollectionModal';
+import { useNotification } from '../hooks/useNotification';
 import {
   MediaId,
   CollectionId,
+  TagId,
   MediaItem,
+  MediaMetadata,
   Collection,
-  MouseEvent
+  MouseEvent,
+  UpdateMediaItem
 } from '../types';
 
 // Comment interface for media item comments (matching MediaItem interface)
@@ -62,6 +66,15 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   const [isEditingTags, setIsEditingTags] = useState<boolean>(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
+  // Metadata editing state
+  const [isEditingMetadata, setIsEditingMetadata] = useState<boolean>(false);
+  const [editedData, setEditedData] = useState<{
+    name: string;
+    status: string;
+    metadata: Record<string, any>;
+  }>({ name: '', status: '', metadata: {} });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
   // Collection state
   const [showCollectionSelector, setShowCollectionSelector] = useState<boolean>(false);
   const [mediaCollections, setMediaCollections] = useState<Collection[]>([]);
@@ -73,10 +86,20 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   const { mutate: addItems, loading: addToCollectionLoading } = useAddItemsToCollection();
   const { mutate: removeItems, loading: removeFromCollectionLoading } = useRemoveItemsFromCollection();
   
-  // Initialize tags when item loads
+  // Media update hook and notifications
+  const { mutate: updateMediaItem, loading: updateMediaLoading } = useUpdateMediaItem();
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
+  
+  // Initialize tags and metadata when item loads
   useEffect(() => {
-    if (item && item.tags) {
-      setSelectedTags(item.tags);
+    if (item) {
+      setSelectedTags(item.tags || []);
+      setEditedData({
+        name: item.name || '',
+        status: item.status || 'draft',
+        metadata: item.metadata || {}
+      });
+      setValidationErrors({});
     }
   }, [item]);
   
@@ -91,8 +114,8 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
           collectionsArray = collections;
         } else if (collections && typeof collections === 'object' && Array.isArray(collections.items)) {
           collectionsArray = collections.items;
-        } else if (collections && typeof collections === 'object' && collections.data && Array.isArray(collections.data.items)) {
-          collectionsArray = collections.data.items;
+        } else if (collections && typeof collections === 'object' && collections.data && Array.isArray(collections.data)) {
+          collectionsArray = collections.data;
         }
         
         // Filter collections that contain this media item
@@ -162,8 +185,8 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
       await updateTags({ 
         mediaIds: [mediaId], 
         updates: { 
-          addTags: tagsToAdd, 
-          removeTags: tagsToRemove 
+          addTags: tagsToAdd as TagId[], 
+          removeTags: tagsToRemove as TagId[]
         }
       });
       
@@ -201,6 +224,123 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
       setMediaCollections(mediaCollections.filter(c => c.id !== collectionId));
     } catch (error) {
       console.error('Failed to remove from collection:', error);
+    }
+  };
+  
+  // Validation helper
+  const validateField = (name: string, value: string): string | null => {
+    switch (name) {
+      case 'name':
+        if (!value.trim()) return 'Name is required';
+        if (value.trim().length < 2) return 'Name must be at least 2 characters';
+        return null;
+      default:
+        return null;
+    }
+  };
+  
+  // Handle metadata field changes
+  const handleFieldChange = (field: string, value: string): void => {
+    setEditedData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear validation error for this field
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Handle metadata object changes (for custom fields)
+  const handleMetadataChange = (key: string, value: string): void => {
+    setEditedData(prev => ({
+      ...prev,
+      metadata: {
+        ...prev.metadata,
+        [key]: value
+      }
+    }));
+  };
+  
+  // Validate all fields
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    const nameError = validateField('name', editedData.name);
+    if (nameError) errors.name = nameError;
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  // Handle save metadata
+  const handleSaveMetadata = async (): Promise<void> => {
+    if (!validateAllFields()) {
+      notifyWarning('Please fix validation errors before saving');
+      return;
+    }
+    
+    if (!item) return;
+    
+    try {
+      const updates: UpdateMediaItem = {
+        name: editedData.name,
+        status: editedData.status as any,
+        metadata: editedData.metadata as MediaMetadata | undefined
+      };
+      
+      await updateMediaItem({ id: mediaId, updates });
+      
+      // Refresh media item to get updated data
+      await refetchMediaItem();
+      
+      setIsEditingMetadata(false);
+      notifySuccess('Metadata updated successfully');
+    } catch (error) {
+      console.error('Failed to update metadata:', error);
+      notifyError('Failed to update metadata. Please try again.');
+    }
+  };
+  
+  // Handle cancel metadata editing
+  const handleCancelMetadata = (): void => {
+    if (item) {
+      setEditedData({
+        name: item.name || '',
+        status: item.status || 'draft',
+        metadata: item.metadata || {}
+      });
+    }
+    setValidationErrors({});
+    setIsEditingMetadata(false);
+  };
+  
+  // Handle start editing metadata
+  const handleStartEditingMetadata = (): void => {
+    if (item) {
+      setEditedData({
+        name: item.name || '',
+        status: item.status || 'draft',
+        metadata: item.metadata || {}
+      });
+    }
+    setValidationErrors({});
+    setIsEditingMetadata(true);
+  };
+  
+  // Handle keyboard navigation in edit mode
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveMetadata();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelMetadata();
     }
   };
   
@@ -344,7 +484,42 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
           {detailsTab === 'info' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="text-base font-medium truncate flex-1" title={item.name}>{item.name}</h4>
+                <div className="flex-1 mr-2">
+                  {isEditingMetadata ? (
+                    <div>
+                      <input 
+                        type="text" 
+                        value={editedData.name}
+                        className={`w-full text-base font-medium border rounded-md px-2 py-1 ${
+                          validationErrors.name 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Enter media title..."
+                        autoFocus
+                        aria-label="Media title"
+                        aria-describedby={validationErrors.name ? 'name-error' : undefined}
+                        aria-invalid={validationErrors.name ? 'true' : 'false'}
+                      />
+                      {validationErrors.name && (
+                        <div id="name-error" className="mt-1 text-xs text-red-600 flex items-center" role="alert">
+                          <AlertCircle size={12} className="mr-1" />
+                          {validationErrors.name}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <h4 
+                      className="text-base font-medium truncate cursor-pointer hover:text-blue-600" 
+                      title={`${item.name} (Click to edit)`}
+                      onClick={handleStartEditingMetadata}
+                    >
+                      {item.name}
+                    </h4>
+                  )}
+                </div>
                 <div className="flex space-x-1">
                   <button 
                     className={`p-1 text-gray-400 hover:text-yellow-500 ${item.starred ? 'text-yellow-500' : ''}`}
@@ -360,6 +535,15 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
                   >
                     <Heart size={16} />
                   </button>
+                  {!isEditingMetadata && (
+                    <button 
+                      className="p-1 text-gray-400 hover:text-blue-500"
+                      onClick={handleStartEditingMetadata}
+                      title="Edit metadata"
+                    >
+                      <Edit size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -542,24 +726,54 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
                 </div>
               )}
               
+              {/* Edit mode controls */}
+              {isEditingMetadata && (
+                <div className="flex space-x-2 pt-2 border-t border-gray-100">
+                  <button 
+                    className={`flex-1 px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 flex items-center justify-center ${
+                      updateMediaLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    onClick={handleSaveMetadata}
+                    disabled={updateMediaLoading}
+                  >
+                    {updateMediaLoading ? (
+                      <Loader className="animate-spin mr-2" size={14} />
+                    ) : (
+                      <Save size={14} className="mr-2" />
+                    )}
+                    Save
+                  </button>
+                  <button 
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 flex items-center justify-center"
+                    onClick={handleCancelMetadata}
+                    disabled={updateMediaLoading}
+                  >
+                    <X size={14} className="mr-2" />
+                    Cancel
+                  </button>
+                </div>
+              )}
+              
               {/* Actions */}
-              <div className="pt-4 flex space-x-2">
-                <button 
-                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600"
-                  onClick={handleOpenEditor}
-                >
-                  {item.type === 'image' ? 'Edit Image' : 'Edit'}
-                </button>
-                <button className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-                  <Share size={16} />
-                </button>
-                <button className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-                  <Download size={16} />
-                </button>
-                <button className="px-3 py-2 border border-gray-300 rounded-md text-sm text-red-600 hover:bg-red-50 hover:border-red-300">
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              {!isEditingMetadata && (
+                <div className="pt-4 flex space-x-2">
+                  <button 
+                    className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600"
+                    onClick={handleOpenEditor}
+                  >
+                    {item.type === 'image' ? 'Edit Image' : 'Edit'}
+                  </button>
+                  <button className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                    <Share size={16} />
+                  </button>
+                  <button className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                    <Download size={16} />
+                  </button>
+                  <button className="px-3 py-2 border border-gray-300 rounded-md text-sm text-red-600 hover:bg-red-50 hover:border-red-300">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
           
@@ -568,30 +782,155 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h4 className="text-sm font-medium">Metadata</h4>
-                <button className="text-xs text-blue-600 hover:text-blue-800">
-                  <Plus size={14} className="inline mr-1" />
-                  Add Field
-                </button>
-              </div>
-              <div className="space-y-3">
-                {item.metadata && Object.entries(item.metadata).map(([key, value]) => (
-                  <div key={key} className="text-sm">
-                    <div className="text-gray-500 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</div>
-                    <input 
-                      type="text" 
-                      value={String(value)} 
-                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                      onChange={() => {}}
-                    />
-                  </div>
-                ))}
+                {!isEditingMetadata && (
+                  <button 
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={handleStartEditingMetadata}
+                  >
+                    <Edit size={14} className="inline mr-1" />
+                    Edit
+                  </button>
+                )}
               </div>
               
-              <div className="pt-2">
-                <button className="w-full px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600">
-                  Save Metadata
-                </button>
+              {/* Basic metadata fields */}
+              <div className="space-y-3">
+                {/* Name/Title */}
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">Title:</div>
+                  {isEditingMetadata ? (
+                    <div>
+                      <input 
+                        type="text" 
+                        value={editedData.name}
+                        className={`w-full p-2 border rounded-md text-sm ${
+                          validationErrors.name 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Enter media title..."
+                      />
+                      {validationErrors.name && (
+                        <div className="mt-1 text-xs text-red-600 flex items-center">
+                          <AlertCircle size={12} className="mr-1" />
+                          {validationErrors.name}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-2 bg-gray-50 rounded-md text-sm">{item.name}</div>
+                  )}
+                </div>
+                
+                {/* Status */}
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">Status:</div>
+                  {isEditingMetadata ? (
+                    <select
+                      value={editedData.status}
+                      onChange={(e) => handleFieldChange('status', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                      aria-label="Media status"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="in_review">In Review</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  ) : (
+                    <div className="p-2 bg-gray-50 rounded-md text-sm">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(item.status)}`}>
+                        {item.status === 'in_review' ? 'In Review' : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Read-only fields */}
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">File Type:</div>
+                  <div className="p-2 bg-gray-50 rounded-md text-sm capitalize">{item.type}</div>
+                </div>
+                
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">File Size:</div>
+                  <div className="p-2 bg-gray-50 rounded-md text-sm">{item.size}</div>
+                </div>
+                
+                {item.dimensions && (
+                  <div className="text-sm">
+                    <div className="text-gray-500 mb-1">Dimensions:</div>
+                    <div className="p-2 bg-gray-50 rounded-md text-sm">{item.dimensions}</div>
+                  </div>
+                )}
+                
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">Created:</div>
+                  <div className="p-2 bg-gray-50 rounded-md text-sm">{item.created}</div>
+                </div>
+                
+                <div className="text-sm">
+                  <div className="text-gray-500 mb-1">Modified:</div>
+                  <div className="p-2 bg-gray-50 rounded-md text-sm">{item.modified}</div>
+                </div>
               </div>
+              
+              {/* Custom metadata fields */}
+              {item.metadata && Object.keys(item.metadata).length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">Custom Fields</div>
+                  <div className="space-y-3">
+                    {Object.entries(item.metadata).map(([key, value]) => (
+                      <div key={key} className="text-sm">
+                        <div className="text-gray-500 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</div>
+                        {isEditingMetadata ? (
+                          <input 
+                            type="text" 
+                            value={String(editedData.metadata[key] || value)} 
+                            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(e) => handleMetadataChange(key, e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={`Enter ${key}...`}
+                            aria-label={`${key.replace(/([A-Z])/g, ' $1').trim()}`}
+                          />
+                        ) : (
+                          <div className="p-2 bg-gray-50 rounded-md text-sm">{String(value)}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Action buttons */}
+              {isEditingMetadata && (
+                <div className="flex space-x-2 pt-2">
+                  <button 
+                    className={`flex-1 px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 flex items-center justify-center ${
+                      updateMediaLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    onClick={handleSaveMetadata}
+                    disabled={updateMediaLoading}
+                  >
+                    {updateMediaLoading ? (
+                      <Loader className="animate-spin mr-2" size={14} />
+                    ) : (
+                      <Save size={14} className="mr-2" />
+                    )}
+                    Save Changes
+                  </button>
+                  <button 
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 flex items-center justify-center"
+                    onClick={handleCancelMetadata}
+                    disabled={updateMediaLoading}
+                  >
+                    <X size={14} className="mr-2" />
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           )}
           

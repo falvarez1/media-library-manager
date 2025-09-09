@@ -14,9 +14,9 @@ export const DetailsSidebarWrapper: React.FC = () => {
   const { showDetails, setDetailsVisible } = useUIState();
   const { selectedMediaId } = useNavigation();
 
-  // Debug logging to track state changes
+  // Track state changes
   useEffect(() => {
-    console.log('[DetailsSidebarWrapper] showDetails:', showDetails, 'selectedMediaId:', selectedMediaId);
+    // State change: showDetails and selectedMediaId
   }, [showDetails, selectedMediaId]);
 
   if (!showDetails || !selectedMediaId) {

@@ -286,8 +286,6 @@ const MediaContent: React.FC<MediaContentProps> = ({
     }
   }, [mediaItems, onMediaItemsChange]);
   
-  // Debug logging
-  // MediaContent Debug info available
   
   // Safe logging of folders
   if (mediaItems.length > 0) {
@@ -324,10 +322,6 @@ const foldersOptions: any = {
       ? (foldersData || []).filter((folder: FolderType) => folder.parent === null) // Show root folders in All Media view
       : [];
     
-  // Log folder structure for debugging
-  useEffect(() => {
-    // Current folder and children folders
-  }, [currentFolder, childrenFolders]);
 
   // Fetch collection data if needed
   const { data: collectionData, loading: collectionLoading, error: collectionError } =

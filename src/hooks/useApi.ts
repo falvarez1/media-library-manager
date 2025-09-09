@@ -15,9 +15,11 @@ import type {
   PaginatedResponse,
   ApiError,
   ExtendedApiError,
+  ApiConfig,
   MediaItem,
   MediaQuery,
   MediaFilterOptions,
+  UpdateMediaItem,
   Folder,
   FolderTree,
   FolderQuery,
@@ -70,7 +72,7 @@ export interface UseApiReturn<TData> {
   data: TData;
   loading: boolean;
   error: ExtendedApiError | null;
-  refetch: (newParams?: any) => Promise<TData | null>;
+  refetch: (newParams?: Partial<TParams>) => Promise<TData | null>;
 }
 
 /**
@@ -88,7 +90,7 @@ export interface UseMutationReturn<TData, TParams = any> {
  * Return type for batch operation hooks
  */
 export interface UseBatchOperationReturn<TData> {
-  execute: (itemIds: string[], params?: any) => Promise<TData>;
+  execute: (itemIds: string[], params?: Record<string, unknown>) => Promise<TData>;
   loading: boolean;
   error: ExtendedApiError | null;
   success: ApiResponse<TData> | null;
@@ -327,12 +329,12 @@ export const useUpdateFolder = (): UseMutationReturn<Folder, { id: FolderId; upd
 /**
  * Hook for deleting folders
  */
-export const useDeleteFolder = (): UseMutationReturn<{ success: boolean }, { id: FolderId; options?: any }> => {
+export const useDeleteFolder = (): UseMutationReturn<{ success: boolean }, { id: FolderId; options?: { deleteChildren?: boolean } }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<{ success: boolean }> | null>(null);
 
-  const mutate = async ({ id, options = {} }: { id: FolderId; options?: any }): Promise<{ success: boolean }> => {
+  const mutate = async ({ id, options = {} }: { id: FolderId; options?: { deleteChildren?: boolean } }): Promise<{ success: boolean }> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -364,7 +366,7 @@ export const useDeleteFolder = (): UseMutationReturn<{ success: boolean }, { id:
  */
 export const useFolderContents = (
   id: FolderId, 
-  options: any = {}, 
+  options: { deleteChildren?: boolean } = {}, 
   deps?: DependencyList
 ): UseApiReturn<any | null> => {
   // Check if we should skip the API call
@@ -393,6 +395,41 @@ export const useFolderContents = (
     executeApi, 
     [id, optionsStr, shouldSkip, ...safeDeps]
   );
+};
+
+/**
+ * Hook for updating a media item
+ */
+export const useUpdateMediaItem = (): UseMutationReturn<MediaItem, { id: MediaId; updates: UpdateMediaItem }> => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<ExtendedApiError | null>(null);
+  const [success, setSuccess] = useState<ApiResponse<MediaItem> | null>(null);
+
+  const mutate = async ({ id, updates }: { id: MediaId; updates: UpdateMediaItem }): Promise<MediaItem> => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await api.media.updateMedia(id, updates);
+      setSuccess(response);
+      return response.data;
+    } catch (err) {
+      const apiError = err as ExtendedApiError;
+      setError(apiError);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = useCallback(() => {
+    setError(null);
+    setSuccess(null);
+    setLoading(false);
+  }, []);
+
+  return { mutate, loading, error, success, reset };
 };
 
 // ============================================================================
@@ -501,12 +538,12 @@ export const useUpdateCollection = (): UseMutationReturn<Collection, { id: Colle
 /**
  * Hook for deleting collections
  */
-export const useDeleteCollection = (): UseMutationReturn<{ success: boolean }, { id: CollectionId; options?: any }> => {
+export const useDeleteCollection = (): UseMutationReturn<{ success: boolean }, { id: CollectionId; options?: { deleteChildren?: boolean } }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<{ success: boolean }> | null>(null);
 
-  const mutate = async ({ id, options = {} }: { id: CollectionId; options?: any }): Promise<{ success: boolean }> => {
+  const mutate = async ({ id, options = {} }: { id: CollectionId; options?: { deleteChildren?: boolean } }): Promise<{ success: boolean }> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -680,12 +717,18 @@ export const useCopyMedia = (): UseMutationReturn<any, { mediaIds: MediaId[]; ta
 /**
  * Hook for exporting media items
  */
-export const useExportMedia = (): UseMutationReturn<any, { mediaIds: MediaId[]; options?: any }> => {
+interface ExportOptions {
+  format?: string;
+  quality?: number;
+  includeMetadata?: boolean;
+}
+
+export const useExportMedia = (): UseMutationReturn<{ url?: string; success: boolean }, { mediaIds: MediaId[]; options?: ExportOptions }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<any> | null>(null);
 
-  const mutate = async ({ mediaIds, options = {} }: { mediaIds: MediaId[]; options?: any }): Promise<any> => {
+  const mutate = async ({ mediaIds, options = {} }: { mediaIds: MediaId[]; options?: ExportOptions }): Promise<{ url?: string; success: boolean }> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -715,12 +758,18 @@ export const useExportMedia = (): UseMutationReturn<any, { mediaIds: MediaId[]; 
 /**
  * Hook for sharing media items
  */
-export const useShareMedia = (): UseMutationReturn<any, { mediaIds: MediaId[]; shareOptions?: any }> => {
+interface ShareOptions {
+  permissions?: string[];
+  expiry?: string;
+  password?: string;
+}
+
+export const useShareMedia = (): UseMutationReturn<{ shareUrl?: string; success: boolean }, { mediaIds: MediaId[]; shareOptions?: ShareOptions }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<any> | null>(null);
 
-  const mutate = async ({ mediaIds, shareOptions = {} }: { mediaIds: MediaId[]; shareOptions?: any }): Promise<any> => {
+  const mutate = async ({ mediaIds, shareOptions = {} }: { mediaIds: MediaId[]; shareOptions?: ShareOptions }): Promise<{ shareUrl?: string; success: boolean }> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -755,7 +804,7 @@ export const useShareMedia = (): UseMutationReturn<any, { mediaIds: MediaId[]; s
  * Hook for fetching tags
  */
 export const useTags = (
-  options: any = {}, 
+  options: { deleteChildren?: boolean } = {}, 
   deps: DependencyList = []
 ): UseApiReturn<Tag[] | null> => {
   const executeApi = useCallback(async (): Promise<ApiResponse<Tag[]>> => {
@@ -824,12 +873,12 @@ export const useCreateTagCategory = (): UseMutationReturn<TagCategory, CreateTag
 /**
  * Hook for updating tag categories
  */
-export const useUpdateTagCategory = (): UseMutationReturn<TagCategory, { id: TagCategoryId; updates: any }> => {
+export const useUpdateTagCategory = (): UseMutationReturn<TagCategory, { id: TagCategoryId; updates: Partial<TagCategory> }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<TagCategory> | null>(null);
 
-  const mutate = async ({ id, updates }: { id: TagCategoryId; updates: any }): Promise<TagCategory> => {
+  const mutate = async ({ id, updates }: { id: TagCategoryId; updates: Partial<TagCategory> }): Promise<TagCategory> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -964,12 +1013,17 @@ export const useDeleteTag = (): UseMutationReturn<{ success: boolean }, TagId> =
 /**
  * Hook for batch updating tags
  */
-export const useBatchUpdateTags = (): UseMutationReturn<any, { mediaIds: MediaId[]; updates: any }> => {
+interface BatchUpdateResult {
+  success: boolean;
+  updatedCount: number;
+}
+
+export const useBatchUpdateTags = (): UseMutationReturn<BatchUpdateResult, { mediaIds: MediaId[]; updates: { tags?: TagId[]; addTags?: TagId[]; removeTags?: TagId[] } }> => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ExtendedApiError | null>(null);
   const [success, setSuccess] = useState<ApiResponse<any> | null>(null);
 
-  const mutate = async ({ mediaIds, updates }: { mediaIds: MediaId[]; updates: any }): Promise<any> => {
+  const mutate = async ({ mediaIds, updates }: { mediaIds: MediaId[]; updates: { tags?: TagId[]; addTags?: TagId[]; removeTags?: TagId[] } }): Promise<BatchUpdateResult> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -1000,7 +1054,7 @@ export const useBatchUpdateTags = (): UseMutationReturn<any, { mediaIds: MediaId
  * Hook for fetching popular tags
  */
 export const usePopularTags = (
-  options: any = {}, 
+  options: { deleteChildren?: boolean } = {}, 
   deps: DependencyList = []
 ): UseApiReturn<PopularTag[] | null> => {
   const executeApi = useCallback((): Promise<ApiResponse<PopularTag[]>> => 
@@ -1014,7 +1068,7 @@ export const usePopularTags = (
  */
 export const useTagSuggestions = (
   query: string, 
-  options: any = {}, 
+  options: { deleteChildren?: boolean } = {}, 
   deps: DependencyList = []
 ): UseApiReturn<TagSuggestion[] | null> => {
   const executeApi = useCallback(async (): Promise<ApiResponse<TagSuggestion[]>> => {
@@ -1086,7 +1140,7 @@ export interface DataSourceConfig {
   isUsingRealApi: boolean;
   apiBaseUrl: string;
   dataSource: 'real' | 'mock';
-  config: any;
+  config: ApiConfig;
 }
 
 /**
@@ -1102,30 +1156,6 @@ export const useDataSource = (): DataSourceConfig => {
   };
 };
 
-// ============================================================================
-// LEGACY ALIASES (for backwards compatibility)
-// ============================================================================
-
-// Provide backwards compatibility with the old function names
-export const addItems = useAddItemsToCollection;
-export const removeItems = useRemoveItemsFromCollection;
-export const moveMedia = useMoveMedia;
-export const copyMedia = useCopyMedia;
-export const exportMedia = useExportMedia;
-export const shareMedia = useShareMedia;
-export const createFolder = useCreateFolder;
-export const updateFolder = useUpdateFolder;
-export const deleteFolder = useDeleteFolder;
-export const createCollection = useCreateCollection;
-export const updateCollection = useUpdateCollection;
-export const deleteCollection = useDeleteCollection;
-export const createCategory = useCreateTagCategory;
-export const updateCategory = useUpdateTagCategory;
-export const createTag = useCreateTag;
-export const updateTag = useUpdateTag;
-export const deleteTag = useDeleteTag;
-export const batchUpdate = useBatchUpdateTags;
-export const deleteCategory = useDeleteTagCategory;
 
 // Default export for main useApi hook
 export default useApi;

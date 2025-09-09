@@ -48,6 +48,7 @@ export type {
   PaginationMeta,
   ApiResponse,
   PaginatedResponse,
+  PaginatedData,
 
   // Query and filter types
   BaseQuery,
@@ -88,6 +89,9 @@ export type {
   Permission,
   PermissionSet
 } from './common.types';
+
+// Import NavigationView from contexts
+export type { NavigationView } from '../contexts/NavigationContext';
 
 // Type guards from common types
 export {
@@ -272,6 +276,18 @@ export {
   MAX_COLLECTION_DEPTH,
   MAX_COLLECTION_NAME_LENGTH
 } from './collection.types';
+
+// ============================================================================
+// TAG TYPES
+// ============================================================================
+export type {
+  // Main tag interfaces
+  Tag,
+  TagCategory,
+  TagQuery,
+  PopularTag,
+  TagSuggestion
+} from '../services/api/tagsService';
 
 // ============================================================================
 // AUTH & USER TYPES

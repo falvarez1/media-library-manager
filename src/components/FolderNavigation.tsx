@@ -7,7 +7,6 @@ import CollectionNavigation from './CollectionNavigation';
 import TagManager from './TagManager';
 import TagSelector from './TagSelector';
 import CollectionModal from './CollectionModal';
-import mockFolders from '../mocks/data/folders';
 import {
   useFolders, useCollections, useTags, useTagCategories,
   useCreateFolder, useUpdateFolder, useDeleteFolder,

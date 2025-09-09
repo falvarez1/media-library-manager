@@ -23,14 +23,13 @@ export const getMedia = async (options = {}) => {
   // Extract folder from options
   let folderValue = null;
   
-  // Log initial arguments
-  console.log('[mediaApi] getMedia called with options:', options);
+  // Initial arguments processing
   
   // Extract folder from options if present
   if (options && options.folder) {
     folderValue = typeof options.folder === 'string' || typeof options.folder === 'number' ?
       options.folder.toString() : null;
-    console.log('[mediaApi] Using folder from options:', folderValue);
+    // Using folder from options
   }
   
   // Extract all other options with defaults
@@ -54,15 +53,15 @@ export const getMedia = async (options = {}) => {
   // Filter by folder - Enhanced logging
   let filtered = [...mediaItems];
   
-  console.log('[mediaApi] Final folder value to use:', folderValue);
+  // Final folder value determined
   
-  // Debug to help diagnose the issue
+  // Check for empty folder string
   if (folderValue === '') {
-    console.log('[mediaApi] WARNING: Empty folder string detected!');
+    // Empty folder string detected
   }
   
   if (folderValue !== null && folderValue !== undefined && folderValue !== '' && folderValue !== 'all') {
-    console.log('[mediaApi] Filtering by folder:', folderValue);
+    // Filtering by folder
     try {
       // Import folders to get the hierarchy
       const foldersModule = await import('../data/folders');
@@ -94,12 +93,9 @@ export const getMedia = async (options = {}) => {
       // Find all child folders - use the string value consistently
       findChildFolders(folderValue);
       
-      console.log('[mediaApi] Filtering media for folder and children:', folderIds);
+      // Filtering media for folder and children
       
-      // Debug output first few media items
-      console.log('[mediaApi] Sample media items before filtering:', 
-        mediaItems.slice(0, 3).map(item => ({ id: item.id, folder: item.folder, name: item.name }))
-      );
+      // Processing media items for filtering
       
       // Filter media by any folder in the hierarchy
       filtered = filtered.filter(item => {
@@ -107,25 +103,18 @@ export const getMedia = async (options = {}) => {
         const itemFolder = item.folder !== null && item.folder !== undefined ? item.folder.toString() : null;
         const isInFolder = itemFolder !== null && folderIds.includes(itemFolder);
         
-        // More verbose logging to debug the issue
-        if (folderIds.length < 10 && mediaItems.indexOf(item) < 5) {  // Only log first few items
-          console.log(`[mediaApi] Media item ${item.id} folder check:`, {
-            itemFolder,
-            folderIds,
-            isInFolder
-          });
-        }
+        // Check if item is in folder hierarchy
         
         return isInFolder;
       });
-      console.log(`[mediaApi] Found ${filtered.length} media items in folder(s):`, folderIds);
+      // Media items filtered by folder
     } catch (error) {
-      console.log('[mediaApi] Error filtering by folder:', error);
+      console.error('[mediaApi] Error filtering by folder:', error);
       // If there's an error, just filter by the exact folder ID
       filtered = filtered.filter(item => item.folder === folderValue);
     }
   } else {
-    console.log('[mediaApi] No specific folder filtering applied - showing all media');
+    // No specific folder filtering applied - showing all media
   }
   
   // Filter by collection
@@ -241,11 +230,7 @@ export const getMedia = async (options = {}) => {
   
   // Return paginated results
   const paginatedResult = paginate(filtered, page, pageSize);
-  console.log('[mediaApi] Returning paginated result:', {
-    totalItems: paginatedResult.items?.length || 0,
-    pagination: paginatedResult.meta,
-    firstItem: paginatedResult.items?.[0]
-  });
+  // Returning paginated result
   
   // Return in the format expected by the service layer
   // The wrapResponse will add success, message, timestamp, requestId
@@ -510,6 +495,46 @@ export const getMediaStats = async () => {
   });
 };
 
+/**
+ * Toggle star status for a media item
+ * @param {string} id - Media item ID
+ * @returns {Promise} - Promise resolving to updated media item
+ */
+export const toggleStar = async (id) => {
+  await delay();
+  simulateRandomFailure(0.02, 'Failed to toggle star status', 503, 'service_unavailable');
+  
+  const media = mediaItems.find(item => item.id === id);
+  if (!media) {
+    throw createError('Media item not found', 404, 'not_found');
+  }
+  
+  // Toggle the starred status
+  media.starred = !media.starred;
+  
+  return wrapResponse(media, `Media ${media.starred ? 'starred' : 'unstarred'} successfully`);
+};
+
+/**
+ * Toggle favorite status for a media item
+ * @param {string} id - Media item ID
+ * @returns {Promise} - Promise resolving to updated media item
+ */
+export const toggleFavorite = async (id) => {
+  await delay();
+  simulateRandomFailure(0.02, 'Failed to toggle favorite status', 503, 'service_unavailable');
+  
+  const media = mediaItems.find(item => item.id === id);
+  if (!media) {
+    throw createError('Media item not found', 404, 'not_found');
+  }
+  
+  // Toggle the favorited status
+  media.favorited = !media.favorited;
+  
+  return wrapResponse(media, `Media ${media.favorited ? 'favorited' : 'unfavorited'} successfully`);
+};
+
 // Export all media API functions
 export default {
   getMedia,
@@ -519,5 +544,7 @@ export default {
   deleteMedia,
   batchUpdateMedia,
   batchDeleteMedia,
-  getMediaStats
+  getMediaStats,
+  toggleStar,
+  toggleFavorite
 };

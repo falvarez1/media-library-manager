@@ -8,9 +8,7 @@ import {
   X, 
   Save, 
   ArrowLeft, 
-  Trash2, 
   Clock, 
-  Plus, 
   ChevronDown,
   Info,
   Filter
