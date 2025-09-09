@@ -105,7 +105,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
           setMediaCollections([]);
         }
       } catch (error) {
-        console.error('[DetailsSidebar] Error processing collections:', error);
+        // Silently handle error
         setMediaCollections([]);
       }
     } else {

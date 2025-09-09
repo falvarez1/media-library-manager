@@ -13,6 +13,8 @@ export interface MediaViewerProps {
   onNavigatePrevious?: () => void;
   onToggleStar?: (mediaId: MediaId) => void;
   onToggleFavorite?: (mediaId: MediaId) => void;
+  canNavigateNext?: boolean;
+  canNavigatePrevious?: boolean;
 }
 
 export interface MediaViewerHeaderProps {
@@ -20,6 +22,8 @@ export interface MediaViewerHeaderProps {
   onClose: () => void;
   onNavigate: (direction: 'next' | 'prev') => void;
   onShowDetails?: () => void;
+  canNavigateNext?: boolean;
+  canNavigatePrevious?: boolean;
 }
 
 export interface MediaViewerFooterProps {

@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Development overrides - this file is automatically loaded by docker-compose
+services:
+  backend:
+    build:
+      target: development  # Use development stage from Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Enable detailed errors and logging
+      Logging__LogLevel__Default: Debug
+      Logging__LogLevel__Microsoft: Information
+      Logging__LogLevel__Microsoft.Hosting.Lifetime: Information
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app
+      - ./backend/bin:/app/bin
+      - ./backend/obj:/app/obj
+    command: ["dotnet", "watch", "run", "--no-restore"]
+
+  frontend:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+      # Enable Next.js fast refresh
+      WATCHPACK_POLLING: "true"
+    volumes:
+      # Mount all source files for hot reload
+      - .:/app
+      - /app/node_modules  # Exclude node_modules
+      - /app/.next         # Exclude build output
+    command: ["npm", "run", "dev"]
+
+  # Development database admin tool
+  adminer:
+    image: adminer:latest
+    container_name: medialib-adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - medialib-network
+    depends_on:
+      - postgres

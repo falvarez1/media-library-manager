@@ -280,7 +280,8 @@ const MediaContent: React.FC<MediaContentProps> = ({
   
   // Notify parent when media items change
   useEffect(() => {
-    if (onMediaItemsChange && mediaItems.length > 0) {
+    if (onMediaItemsChange) {
+      // Always update, even with empty array to ensure consistency
       onMediaItemsChange(mediaItems.map(item => item.id));
     }
   }, [mediaItems, onMediaItemsChange]);

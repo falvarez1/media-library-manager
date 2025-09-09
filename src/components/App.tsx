@@ -14,6 +14,7 @@ import AdvancedSearch from './AdvancedSearch';
 import KeyboardShortcuts, { useKeyboardShortcuts, KeyboardShortcutsModal } from './KeyboardShortcuts';
 import UserPreferences from './UserPreferences';
 import ContextDebugger from './ContextDebugger';
+import ApiModeToggle from './ApiModeToggle';
 import {
   useCreateFolder, useMedia, useCollections, useCreateCollection,
   useUpdateCollection, useDeleteCollection, useTags, useMoveMedia,
@@ -187,9 +188,7 @@ const App: React.FC = () => {
   const { mutate: batchUpdateMedia, loading: batchUpdateLoading } = useBatchUpdateTags();
   
   // Monitor showDetails state changes
-  useEffect(() => {
-    console.log('[App] showDetails state changed to:', showDetails);
-  }, [showDetails]);
+  // Removed debug logging
 
   // Update filters when tags are selected
   useEffect(() => {
@@ -758,21 +757,29 @@ const App: React.FC = () => {
       </div>
       
       {/* Modals */}
-      {showQuickView && quickViewItem && (
-        <MediaViewer
-          mediaId={quickViewItem}
-          onClose={() => setShowQuickView(false)}
-          onShowDetails={() => {
-            setShowDetails(true);
-            setShowQuickView(false);
-          }}
-          onOpenEditor={openEditor}
-          onNavigateNext={handleNavigateNext}
-          onNavigatePrevious={handleNavigatePrevious}
-          onToggleStar={handleToggleStar}
-          onToggleFavorite={handleToggleFavorite}
-        />
-      )}
+      {showQuickView && quickViewItem && (() => {
+        const currentIndex = visibleMediaIds.indexOf(quickViewItem);
+        const canNavigateNext = currentIndex >= 0 && currentIndex < visibleMediaIds.length - 1;
+        const canNavigatePrevious = currentIndex > 0;
+        
+        return (
+          <MediaViewer
+            mediaId={quickViewItem}
+            onClose={() => setShowQuickView(false)}
+            onShowDetails={() => {
+              setShowDetails(true);
+              setShowQuickView(false);
+            }}
+            onOpenEditor={openEditor}
+            onNavigateNext={handleNavigateNext}
+            onNavigatePrevious={handleNavigatePrevious}
+            onToggleStar={handleToggleStar}
+            onToggleFavorite={handleToggleFavorite}
+            canNavigateNext={canNavigateNext}
+            canNavigatePrevious={canNavigatePrevious}
+          />
+        );
+      })()}
       
       {showImageEditor && selectedMedia.length === 1 && (
         <MediaEditor 
@@ -838,6 +845,9 @@ const App: React.FC = () => {
       
       {/* Context Debugger - Development only */}
       {process.env.NODE_ENV === 'development' && <ContextDebugger />}
+      
+      {/* API Mode Toggle - Development only */}
+      {process.env.NODE_ENV === 'development' && <ApiModeToggle />}
     </div>
     </KeyboardShortcuts>
   );

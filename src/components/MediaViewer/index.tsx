@@ -32,7 +32,9 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   onNavigateNext,
   onNavigatePrevious,
   onToggleStar,
-  onToggleFavorite
+  onToggleFavorite,
+  canNavigateNext = true,
+  canNavigatePrevious = true
 }) => {
   // Fetch media item data
   const { data: item, loading, error } = useMediaItem(mediaId);
@@ -64,18 +66,18 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   }, [onClose]);
   
   const handleNavigate = useCallback((direction: 'next' | 'prev') => {
-    if (direction === 'next' && onNavigateNext) {
+    if (direction === 'next' && onNavigateNext && canNavigateNext) {
       onNavigateNext();
-    } else if (direction === 'prev' && onNavigatePrevious) {
+    } else if (direction === 'prev' && onNavigatePrevious && canNavigatePrevious) {
       onNavigatePrevious();
     }
-  }, [onNavigateNext, onNavigatePrevious]);
+  }, [onNavigateNext, onNavigatePrevious, canNavigateNext, canNavigatePrevious]);
   
   // Setup keyboard shortcuts
   const keyboardHandlers = useMemo(() => ({
     Escape: handleClose,
-    ArrowLeft: () => handleNavigate('prev'),
-    ArrowRight: () => handleNavigate('next'),
+    ArrowLeft: () => canNavigatePrevious && handleNavigate('prev'),
+    ArrowRight: () => canNavigateNext && handleNavigate('next'),
     '+': () => imageDispatch({ type: 'ZOOM_IN' }),
     '-': () => imageDispatch({ type: 'ZOOM_OUT' }),
     'r': () => imageDispatch({ type: 'ROTATE' }),
@@ -161,6 +163,8 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         onClose={handleClose}
         onNavigate={handleNavigate}
         onShowDetails={onShowDetails}
+        canNavigateNext={canNavigateNext}
+        canNavigatePrevious={canNavigatePrevious}
       />
       
       <div className="flex-1 relative overflow-hidden">

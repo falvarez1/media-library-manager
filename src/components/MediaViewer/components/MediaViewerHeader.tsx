@@ -12,7 +12,9 @@ const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({
   item,
   onClose,
   onNavigate,
-  onShowDetails
+  onShowDetails,
+  canNavigateNext = true,
+  canNavigatePrevious = true
 }) => {
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent">
@@ -30,19 +32,29 @@ const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({
         {/* Center Section - Navigation */}
         <div className="flex items-center space-x-1">
           <button
-            onClick={() => onNavigate('prev')}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded transition-colors"
+            onClick={() => canNavigatePrevious && onNavigate('prev')}
+            className={`p-2 rounded transition-colors ${
+              canNavigatePrevious 
+                ? 'text-white/80 hover:text-white hover:bg-white/10 cursor-pointer' 
+                : 'text-white/30 cursor-not-allowed'
+            }`}
             title="Previous (←)"
             aria-label="Previous item"
+            disabled={!canNavigatePrevious}
           >
             <ArrowLeft size={20} />
           </button>
           
           <button
-            onClick={() => onNavigate('next')}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded transition-colors"
+            onClick={() => canNavigateNext && onNavigate('next')}
+            className={`p-2 rounded transition-colors ${
+              canNavigateNext 
+                ? 'text-white/80 hover:text-white hover:bg-white/10 cursor-pointer' 
+                : 'text-white/30 cursor-not-allowed'
+            }`}
             title="Next (→)"
             aria-label="Next item"
+            disabled={!canNavigateNext}
           >
             <ArrowRight size={20} />
           </button>

@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: medialib-minio
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Console port
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_DEFAULT_BUCKETS:-media-library}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - medialib-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: medialib-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-medialib}
+      POSTGRES_USER: ${POSTGRES_USER:-mediauser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mediapass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mediauser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medialib-network
+
+  # .NET Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medialib-backend
+    ports:
+      - "5005:80"
+      - "5006:443"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:80;https://+:443"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-medialib};Username=${POSTGRES_USER:-mediauser};Password=${POSTGRES_PASSWORD:-mediapass}"
+      MinIO__Endpoint: "minio:9000"
+      MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
+      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:-password123}
+      MinIO__BucketName: ${MINIO_DEFAULT_BUCKETS:-media-library}
+      MinIO__UseSSL: "false"
+      Jwt__Key: ${JWT_KEY:-REPLACE_THIS_WITH_A_VERY_STRONG_AND_SECRET_KEY_32_CHARS_LONG_OR_MORE}
+      Jwt__Issuer: ${JWT_ISSUER:-MediaLibraryManager}
+      Jwt__Audience: ${JWT_AUDIENCE:-MediaLibraryUsers}
+      Cors__Origins__0: "http://localhost:3015"
+      Cors__Origins__1: "http://frontend:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app:ro
+      - backend_logs:/app/logs
+    networks:
+      - medialib-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medialib-frontend
+    ports:
+      - "3015:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5005}
+      NEXT_PUBLIC_MINIO_URL: ${NEXT_PUBLIC_MINIO_URL:-http://localhost:9000}
+    depends_on:
+      - backend
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./styles:/app/styles:ro
+    networks:
+      - medialib-network
+
+  # MinIO Client for initialization
+  minio-client:
+    image: minio/mc:latest
+    container_name: medialib-minio-client
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-password123};
+      /usr/bin/mc mb --ignore-existing myminio/${MINIO_DEFAULT_BUCKETS:-media-library};
+      /usr/bin/mc anonymous set download myminio/${MINIO_DEFAULT_BUCKETS:-media-library};
+      exit 0;
+      "
+    networks:
+      - medialib-network
+
+volumes:
+  minio_data:
+    driver: local
+  postgres_data:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  medialib-network:
+    driver: bridge

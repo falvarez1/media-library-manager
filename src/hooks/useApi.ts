@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, DependencyList } from 'react';
-import api from '../services';
+import api from '../services/api';
 import config from '../services/config';
 
 // Import types

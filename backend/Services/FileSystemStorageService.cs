@@ -172,4 +172,168 @@ public class FileSystemStorageService : IFileStorageService
             return Task.FromResult(false); // Indicate failure
         }
     }
+
+    public async Task<string> SaveFileAsync(Stream fileStream, string fileName, string contentType = "application/octet-stream")
+    {
+        if (fileStream == null || fileStream.Length == 0)
+        {
+            throw new ArgumentException("File stream cannot be null or empty.", nameof(fileStream));
+        }
+
+        var fileExtension = Path.GetExtension(fileName);
+        var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+        var fullPath = Path.Combine(_storagePath, uniqueFileName);
+
+        try
+        {
+            await using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await fileStream.CopyToAsync(stream);
+            }
+            _logger.LogInformation("Successfully saved stream to '{FullPath}'", fullPath);
+            return uniqueFileName;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving stream to '{FullPath}'", fullPath);
+            if (File.Exists(fullPath))
+            {
+                try { File.Delete(fullPath); } catch { }
+            }
+            throw;
+        }
+    }
+
+    public Task<Stream> GetFileAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(_storagePath, filePath));
+        
+        if (!fullPath.StartsWith(_storagePath))
+        {
+            throw new InvalidOperationException("Invalid file path");
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            throw new FileNotFoundException($"File not found: {filePath}");
+        }
+
+        return Task.FromResult<Stream>(new FileStream(fullPath, FileMode.Open, FileAccess.Read));
+    }
+
+    public Task<bool> FileExistsAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return Task.FromResult(false);
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(_storagePath, filePath));
+        
+        if (!fullPath.StartsWith(_storagePath))
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(File.Exists(fullPath));
+    }
+
+    public Task<string> GetPresignedUrlAsync(string filePath, int expiryInSeconds = 3600)
+    {
+        // For file system storage, return a relative URL that the app can serve
+        // In production, this would typically be served through a static file handler
+        return Task.FromResult($"/uploads/{filePath}");
+    }
+
+    public Task<IEnumerable<string>> ListFilesAsync(string prefix = "")
+    {
+        var searchPath = string.IsNullOrWhiteSpace(prefix) 
+            ? _storagePath 
+            : Path.Combine(_storagePath, prefix);
+
+        if (!Directory.Exists(searchPath))
+        {
+            return Task.FromResult(Enumerable.Empty<string>());
+        }
+
+        var files = Directory.GetFiles(searchPath, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(_storagePath, f).Replace('\\', '/'))
+            .ToList();
+
+        return Task.FromResult<IEnumerable<string>>(files);
+    }
+
+    public async Task<bool> CopyFileAsync(string sourcePath, string destinationPath)
+    {
+        try
+        {
+            var sourceFullPath = Path.GetFullPath(Path.Combine(_storagePath, sourcePath));
+            var destFullPath = Path.GetFullPath(Path.Combine(_storagePath, destinationPath));
+
+            if (!sourceFullPath.StartsWith(_storagePath) || !destFullPath.StartsWith(_storagePath))
+            {
+                _logger.LogError("Attempted to copy files outside storage directory");
+                return false;
+            }
+
+            if (!File.Exists(sourceFullPath))
+            {
+                _logger.LogWarning("Source file not found: {SourcePath}", sourcePath);
+                return false;
+            }
+
+            var destDir = Path.GetDirectoryName(destFullPath);
+            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+            {
+                Directory.CreateDirectory(destDir);
+            }
+
+            await Task.Run(() => File.Copy(sourceFullPath, destFullPath, true));
+            _logger.LogInformation("Successfully copied file from '{Source}' to '{Dest}'", sourcePath, destinationPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error copying file from '{Source}' to '{Dest}'", sourcePath, destinationPath);
+            return false;
+        }
+    }
+
+    public Task<long> GetFileSizeAsync(string filePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return Task.FromResult(-1L);
+            }
+
+            var fullPath = Path.GetFullPath(Path.Combine(_storagePath, filePath));
+            
+            if (!fullPath.StartsWith(_storagePath))
+            {
+                _logger.LogError("Attempted to access file outside storage directory: {FilePath}", filePath);
+                return Task.FromResult(-1L);
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                _logger.LogWarning("File not found for size check: {FilePath}", filePath);
+                return Task.FromResult(-1L);
+            }
+
+            var fileInfo = new FileInfo(fullPath);
+            return Task.FromResult(fileInfo.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting file size for '{FilePath}'", filePath);
+            return Task.FromResult(-1L);
+        }
+    }
 }

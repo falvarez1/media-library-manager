@@ -239,13 +239,10 @@ function uiStateReducer(state: UIState, action: UIAction): UIState {
       };
 
     case 'SET_SHOW_DETAILS':
-      console.log('[UIStateContext] SET_SHOW_DETAILS action:', action.payload, 'current state:', state.showDetails);
-      const newState = {
+      return {
         ...state,
         showDetails: action.payload
       };
-      console.log('[UIStateContext] New state after SET_SHOW_DETAILS:', { showDetails: newState.showDetails });
-      return newState;
 
     default:
       return state;
@@ -388,7 +385,6 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
   }, []);
 
   const setDetailsVisible = useCallback((visible: boolean) => {
-    console.log('[UIStateContext] setDetailsVisible called with:', visible);
     // Use flushSync to ensure synchronous state update in React 18+
     flushSync(() => {
       dispatch({ type: 'SET_SHOW_DETAILS', payload: visible });
@@ -452,7 +448,6 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
 
   // Save preferences to localStorage when relevant state changes
   useEffect(() => {
-    console.log('[UIStateContext] Saving preferences, showDetails:', state.showDetails);
     saveUIPreferences(state);
   }, [
     state.theme,
@@ -484,10 +479,6 @@ export function UIStateProvider({ children, initialState = {} }: UIStateProvider
       hideQuickView, openImageEditor, closeImageEditor, closeAllModals,
       setTheme, setViewMode, setGridSize, setSidebarVisible, setDetailsVisible]);
 
-  // Add debug logging
-  useEffect(() => {
-    console.log('[UIStateContext] State updated - showDetails:', state.showDetails);
-  }, [state.showDetails]);
 
   return (
     <UIStateContext.Provider value={contextValue}>

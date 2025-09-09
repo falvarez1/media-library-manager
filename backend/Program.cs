@@ -46,8 +46,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// File Storage Service (using local file system)
-builder.Services.AddSingleton<IFileStorageService, FileSystemStorageService>();
+// File Storage Service - Choose based on configuration
+var useMinIO = builder.Configuration.GetValue<bool>("Storage:UseMinIO", false);
+if (useMinIO || !string.IsNullOrEmpty(builder.Configuration["MinIO:Endpoint"]))
+{
+    builder.Services.AddSingleton<IFileStorageService, MinioStorageService>();
+}
+else
+{
+    builder.Services.AddSingleton<IFileStorageService, FileSystemStorageService>();
+}
 
 // --- Identity & Authentication Configuration ---
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -122,6 +130,11 @@ app.UseCors(AllowFrontendPolicy);
 // --- Authentication & Authorization Middleware ---
 app.UseAuthentication(); // Must come before UseAuthorization
 app.UseAuthorization();
+
+// --- Health Check Endpoint ---
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+   .WithName("HealthCheck")
+   .ExcludeFromDescription();
 
 // --- API Endpoints ---
 // Map the API endpoints defined in separate classes
