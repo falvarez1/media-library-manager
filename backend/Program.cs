@@ -2,7 +2,10 @@ using backend.Api;
 using backend.Application.Interfaces;
 using backend.Application.Services;
 using backend.Data;
+using backend.Domain.Interfaces;
+using backend.Infrastructure.Configuration;
 using backend.Infrastructure.Middleware;
+using backend.Infrastructure.Repositories;
 using backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +15,12 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Service Configuration ---
+
+// Configure JSON serialization to use camelCase for frontend compatibility
+builder.Services.ConfigureHttpJsonOptions(options => 
+{
+    JsonConfiguration.ConfigureJsonOptions(options);
+});
 
 // CORS Policy
 const string AllowFrontendPolicy = "_allowFrontendPolicy";
@@ -60,6 +69,13 @@ else
     builder.Services.AddSingleton<IFileStorageService, FileSystemStorageService>();
 }
 
+// Register repositories
+builder.Services.AddScoped<IMediaRepository, MediaRepository>();
+builder.Services.AddScoped<IFolderRepository, FolderRepository>();
+// TODO: Add other repositories as they are implemented
+// builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
+// builder.Services.AddScoped<ITagRepository, TagRepository>();
+
 // Register application services
 builder.Services.AddScoped<IMediaService, MediaService>();
 // TODO: Add other services as they are implemented
@@ -67,6 +83,12 @@ builder.Services.AddScoped<IMediaService, MediaService>();
 // builder.Services.AddScoped<ICollectionService, CollectionService>();
 // builder.Services.AddScoped<ITagService, TagService>();
 // builder.Services.AddScoped<IUserService, UserService>();
+
+// TODO: Add data seeder when models are properly defined
+// builder.Services.AddScoped<DataSeeder>();
+
+// Add caching
+builder.Services.AddMemoryCache();
 
 // --- Identity & Authentication Configuration ---
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -125,6 +147,17 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// --- Database Initialization ---
+// TODO: Add database seeding when DataSeeder is properly implemented
+// if (app.Environment.IsDevelopment())
+// {
+//     using (var scope = app.Services.CreateScope())
+//     {
+//         var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+//         await seeder.SeedAsync();
+//     }
+// }
+
 // --- HTTP Request Pipeline Configuration ---
 
 // Add custom middleware for logging and error handling
@@ -154,15 +187,10 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 // --- API Endpoints ---
 // Map the API endpoints defined in separate classes
 
-// Media API with service layer
-app.MapGroup("/api/media")
-   .MapMediaApi()
-   .WithTags("Media");
-   
-// Versioned API endpoint (v1)
+// Media API with service layer (using v1 endpoints)
 app.MapGroup("/api/v1/media")
    .MapMediaApi()
-   .WithTags("Media v1");
+   .WithTags("Media");
 
 app.MapGroup("/api/folders")
    .MapFoldersApi() // Use the extension method from FoldersApi

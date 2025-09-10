@@ -1,5 +1,6 @@
 using Minio;
 using Minio.DataModel.Args;
+using Minio.DataModel;
 using Minio.Exceptions;
 using System.Reactive.Linq;
 using Microsoft.AspNetCore.Http;
@@ -229,12 +230,12 @@ public class MinioStorageService : IFileStorageService
                 .WithPrefix(prefix)
                 .WithRecursive(true);
 
-            var observable = _minioClient.ListObjectsAsync(listObjectsArgs);
+            var observable = _minioClient.ListObjectsEnumAsync(listObjectsArgs);
             
-            await observable.ForEachAsync(item =>
+            await foreach (var item in observable)
             {
                 files.Add(item.Key);
-            });
+            }
 
             _logger.LogInformation("Listed {Count} files with prefix: {Prefix}", files.Count, prefix);
             return files;
@@ -250,10 +251,10 @@ public class MinioStorageService : IFileStorageService
     {
         try
         {
-            var copySourceArgs = new CopySourceArgs()
+            var copySourceArgs = new CopySourceObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(sourcePath);
-
+            
             var copyObjectArgs = new CopyObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(destinationPath)

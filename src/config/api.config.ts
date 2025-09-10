@@ -8,14 +8,14 @@
 const USE_MOCK_DATA = typeof window !== 'undefined' 
   ? (localStorage.getItem('mlm-use-mock-data') === 'true' || 
      (localStorage.getItem('mlm-use-mock-data') === null && 
-      import.meta.env.VITE_USE_MOCK_DATA === 'true'))
-  : import.meta.env.VITE_USE_MOCK_DATA === 'true';
+      import.meta.env.VITE_USE_REAL_API !== 'true'))
+  : import.meta.env.VITE_USE_REAL_API !== 'true';
 
 // Backend API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
                      (import.meta.env.MODE === 'production' 
                        ? '/api'  // In production, use relative path
-                       : 'http://localhost:5000/api'); // In development, use local backend
+                       : 'http://localhost:5005/api'); // In development, use local backend
 
 // API endpoints configuration
 export const API_CONFIG = {
@@ -137,7 +137,28 @@ export async function apiRequest<T = any>(
     throw new Error(error.message || `API request failed: ${response.status}`);
   }
   
-  return response.json();
+  const result = await response.json();
+  
+  // Handle .NET API response format
+  // The .NET API returns { success: true, data: T, pagination?: {...} }
+  if (result && typeof result === 'object' && 'success' in result) {
+    if (!result.success) {
+      throw new Error(result.message || 'API request failed');
+    }
+    // Return the data directly, but preserve pagination info if needed
+    if (result.pagination) {
+      // For paginated responses, return an object with items and pagination
+      return {
+        items: result.data,
+        totalCount: result.pagination.totalCount,
+        pagination: result.pagination
+      } as T;
+    }
+    return result.data as T;
+  }
+  
+  // If not in the expected format, return as-is (for backwards compatibility)
+  return result as T;
 }
 
 export default API_CONFIG;

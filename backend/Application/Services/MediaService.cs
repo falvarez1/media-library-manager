@@ -52,7 +52,7 @@ public class MediaService : IMediaService
             
             if (request.FolderId.HasValue)
             {
-                if (request.IncludeSubfolders)
+                if (request.IncludeSubfolders ?? false)
                 {
                     // Get all descendant folder IDs
                     var folderIds = await GetDescendantFolderIds(request.FolderId.Value);
@@ -118,7 +118,7 @@ public class MediaService : IMediaService
             
             // Generate facets if requested
             Dictionary<string, List<FacetValue>>? facets = null;
-            if (request.IncludeFacets)
+            if (request.IncludeFacets ?? false)
             {
                 facets = await GenerateFacets(query);
             }

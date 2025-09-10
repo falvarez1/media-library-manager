@@ -72,7 +72,7 @@ public class GlobalExceptionMiddleware
                 } : null
             },
             RequestId = requestId,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTime.UtcNow.ToString("O")
         };
         
         // Set response

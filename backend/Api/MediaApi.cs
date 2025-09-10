@@ -16,24 +16,24 @@ public static class MediaApi
     {
         // GET /api/media/search - Advanced search with filters
         group.MapGet("/search", SearchMediaItems)
-             .WithName("SearchMedia")
+             .WithName("SearchMediaV1")
              .Produces<PaginatedResponse<MediaItem>>()
              .WithOpenApi();
         
         // GET /api/media - Get all media (deprecated, use /search instead)
         group.MapGet("/", GetAllMediaItems)
-             .WithName("GetMedia")
+             .WithName("GetMediaV1")
              .Produces<PaginatedResponse<MediaItem>>();
 
         // GET /api/media/{id}
         group.MapGet("/{id:guid}", GetMediaItemById)
-             .WithName("GetMediaById")
+             .WithName("GetMediaByIdV1")
              .Produces<ApiResponse<MediaItem>>()
              .Produces<ApiResponse<MediaItem>>(404);
 
         // POST /api/media
         group.MapPost("/", CreateMediaItem)
-             .WithName("CreateMedia")
+             .WithName("CreateMediaV1")
              .DisableAntiforgery()
              .Accepts<IFormFile>("multipart/form-data")
              .Produces<ApiResponse<MediaItem>>(StatusCodes.Status201Created)
@@ -41,61 +41,61 @@ public static class MediaApi
 
         // PUT /api/media/{id}
         group.MapPut("/{id:guid}", UpdateMediaItem)
-             .WithName("UpdateMedia")
+             .WithName("UpdateMediaV1")
              .Accepts<UpdateMediaItemDto>("application/json")
              .Produces<ApiResponse<MediaItem>>()
              .Produces<ApiResponse<MediaItem>>(404);
 
         // DELETE /api/media/{id}
         group.MapDelete("/{id:guid}", DeleteMediaItem)
-             .WithName("DeleteMedia")
+             .WithName("DeleteMediaV1")
              .Produces<ApiResponse<bool>>()
              .Produces<ApiResponse<bool>>(404);
 
         // PATCH /api/media/{id}/star
         group.MapPatch("/{id:guid}/star", ToggleStarMediaItem)
-             .WithName("ToggleStar")
+             .WithName("ToggleStarV1")
              .Produces<ApiResponse<MediaItem>>()
              .Produces<ApiResponse<MediaItem>>(404);
 
         // PATCH /api/media/{id}/favorite
         group.MapPatch("/{id:guid}/favorite", ToggleFavoriteMediaItem)
-             .WithName("ToggleFavorite")
+             .WithName("ToggleFavoriteV1")
              .Produces<ApiResponse<MediaItem>>()
              .Produces<ApiResponse<MediaItem>>(404);
 
         // GET /api/media/statistics
         group.MapGet("/statistics", GetMediaStatistics)
-             .WithName("GetMediaStatistics")
+             .WithName("GetMediaStatisticsV1")
              .Produces<ApiResponse<MediaStatistics>>();
 
         // POST /api/media/batch/move
         group.MapPost("/batch/move", BatchMoveMediaItems)
-             .WithName("BatchMove")
+             .WithName("BatchMoveV1")
              .Accepts<BatchMoveRequest>("application/json")
              .Produces<ApiResponse<BatchOperationResult>>();
 
         // POST /api/media/batch/copy
         group.MapPost("/batch/copy", BatchCopyMediaItems)
-             .WithName("BatchCopy")
+             .WithName("BatchCopyV1")
              .Accepts<BatchCopyRequest>("application/json")
              .Produces<ApiResponse<BatchOperationResult>>();
 
         // POST /api/media/batch/delete
         group.MapPost("/batch/delete", BatchDeleteMediaItems)
-             .WithName("BatchDelete")
+             .WithName("BatchDeleteV1")
              .Accepts<BatchDeleteRequest>("application/json")
              .Produces<ApiResponse<BatchOperationResult>>();
 
         // POST /api/media/batch/tag
         group.MapPost("/batch/tag", BatchTagMediaItems)
-             .WithName("BatchTag")
+             .WithName("BatchTagV1")
              .Accepts<BatchTagRequest>("application/json")
              .Produces<ApiResponse<BatchOperationResult>>();
 
         // GET /api/media/{id}/url
         group.MapGet("/{id:guid}/url", GetMediaItemUrl)
-             .WithName("GetMediaUrl")
+             .WithName("GetMediaUrlV1")
              .Produces<ApiResponse<MediaUrlResponse>>()
              .Produces<ApiResponse<MediaUrlResponse>>(404);
 
@@ -212,10 +212,9 @@ public static class MediaApi
 
     // Handler for GET /api/media/statistics
     private static async Task<IResult> GetMediaStatistics(
-        [AsParameters] StatisticsQuery? query,
         IMediaService mediaService)
     {
-        var result = await mediaService.GetStatisticsAsync(query);
+        var result = await mediaService.GetStatisticsAsync(null);
         return Results.Ok(result);
     }
 

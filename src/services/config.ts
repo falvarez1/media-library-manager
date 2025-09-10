@@ -106,11 +106,11 @@ interface RuntimeConfig {
 // CONFIGURATION UTILITIES
 // ============================================================================
 
-// Get Vite runtime configuration from environment variables
+// Get runtime configuration from environment variables
 const runtimeConfig: RuntimeConfig = {
   apiConfig: {
     useRealApi: import.meta.env.VITE_USE_REAL_API === 'true',
-    apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5005'
+    apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5005/api'
   },
   mockConfig: {
     delayMin: parseInt(import.meta.env.VITE_MOCK_DELAY_MIN || '200', 10),

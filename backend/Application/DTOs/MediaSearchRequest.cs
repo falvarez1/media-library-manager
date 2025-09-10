@@ -10,7 +10,7 @@ public class MediaSearchRequest
     public string[]? Tags { get; set; }
     public string? Status { get; set; }
     public Guid? FolderId { get; set; }
-    public bool IncludeSubfolders { get; set; } = false;
+    public bool? IncludeSubfolders { get; set; }
     
     // Date filtering
     public DateTimeOffset? DateFrom { get; set; }
@@ -34,7 +34,7 @@ public class MediaSearchRequest
     public int PageSize { get; set; } = 20;
     
     // Additional options
-    public bool IncludeFacets { get; set; } = false;
+    public bool? IncludeFacets { get; set; }
     public string[]? FacetFields { get; set; }
 }
 

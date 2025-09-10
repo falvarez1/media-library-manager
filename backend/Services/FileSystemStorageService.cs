@@ -12,6 +12,8 @@ public class FileSystemStorageService : IFileStorageService
 
     public FileSystemStorageService(IWebHostEnvironment env, IConfiguration config, ILogger<FileSystemStorageService> logger)
     {
+        _logger = logger; // Initialize logger first
+        
         // Get base storage path from configuration or default to a 'uploads' folder in wwwroot
         // Ensure wwwroot exists if using it as a base.
         var configuredPath = config.GetValue<string>("Storage:FileSystem:BasePath");
@@ -33,7 +35,6 @@ public class FileSystemStorageService : IFileStorageService
                 : Path.GetFullPath(Path.Combine(env.ContentRootPath, configuredPath));
         }
 
-        _logger = logger;
         _logger.LogInformation("File System Storage Path configured to: {StoragePath}", _storagePath);
 
         // Ensure the base storage directory exists
