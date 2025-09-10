@@ -3,6 +3,8 @@
  * Provides safe methods for localStorage operations with fallbacks
  */
 
+import { logError } from '../services/logger';
+
 /**
  * Generic type for values that can be stored in localStorage
  */
@@ -60,10 +62,7 @@ export const getStorageItem = <T extends StorageValue>(
       return item as T;
     }
   } catch (error) {
-    // Log error in development only
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`Failed to get item from localStorage: ${key}`, error);
-    }
+    logError('Storage', `Failed to get item from localStorage: ${key}`, error);
     return defaultValue;
   }
 };
@@ -90,10 +89,7 @@ export const setStorageItem = <T extends StorageValue>(
     localStorage.setItem(key, serializedValue);
     return true;
   } catch (error) {
-    // Log error in development only
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`Failed to set item in localStorage: ${key}`, error);
-    }
+    logError('Storage', `Failed to set item in localStorage: ${key}`, error);
     return false;
   }
 };
@@ -112,10 +108,7 @@ export const removeStorageItem = (key: string): boolean => {
     localStorage.removeItem(key);
     return true;
   } catch (error) {
-    // Log error in development only
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`Failed to remove item from localStorage: ${key}`, error);
-    }
+    logError('Storage', `Failed to remove item from localStorage: ${key}`, error);
     return false;
   }
 };
@@ -133,10 +126,7 @@ export const clearStorage = (): boolean => {
     localStorage.clear();
     return true;
   } catch (error) {
-    // Log error in development only
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to clear localStorage', error);
-    }
+    logError('Storage', 'Failed to clear localStorage', error);
     return false;
   }
 };
@@ -153,10 +143,7 @@ export const getStorageKeys = (): string[] => {
   try {
     return Object.keys(localStorage);
   } catch (error) {
-    // Log error in development only
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get localStorage keys', error);
-    }
+    logError('Storage', 'Failed to get localStorage keys', error);
     return [];
   }
 };

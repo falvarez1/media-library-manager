@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import storage from '../utils/storage';
+import { logDebug, logWarn } from '../services/logger';
 import { useUIState } from '../contexts/UIStateContext';
 import { Menu, Upload, Folders, Search, Filter, Bell, User, KeyboardIcon, Settings } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
@@ -137,7 +138,12 @@ const App: React.FC = () => {
   // showDetails is now managed by UIStateContext
   const [showQuickView, setShowQuickView] = useState<boolean>(false);
   const [quickViewItem, setQuickViewItem] = useState<MediaId | null>(null);
-  const [visibleMediaIds] = useState<MediaId[]>([]);
+  const [visibleMediaIds, setVisibleMediaIds] = useState<MediaId[]>([]);
+  
+  // Debug: Log when visibleMediaIds changes
+  useEffect(() => {
+    logDebug('MediaViewer', `visibleMediaIds updated: ${visibleMediaIds.length} items`, visibleMediaIds);
+  }, [visibleMediaIds]);
   const [showImageEditor, setShowImageEditor] = useState<boolean>(false);
   
   // Track starred and favorited items locally
@@ -317,7 +323,16 @@ const App: React.FC = () => {
   
   // Navigation handlers for QuickView
   const handleNavigateNext = useCallback(() => {
-    if (!quickViewItem || visibleMediaIds.length === 0) return;
+    if (!quickViewItem || visibleMediaIds.length === 0) {
+      // Debug: log why navigation is not working
+      if (!quickViewItem) {
+        logWarn('MediaViewer', 'Cannot navigate: no quickViewItem');
+      }
+      if (visibleMediaIds.length === 0) {
+        logWarn('MediaViewer', 'Cannot navigate: visibleMediaIds is empty');
+      }
+      return;
+    }
     
     const currentIndex = visibleMediaIds.indexOf(quickViewItem);
     if (currentIndex >= 0) {
@@ -325,11 +340,23 @@ const App: React.FC = () => {
       const nextIndex = currentIndex < visibleMediaIds.length - 1 ? currentIndex + 1 : 0;
       const nextId = visibleMediaIds[nextIndex];
       setQuickViewItem(nextId);
+      logDebug('MediaViewer', `Navigating next: ${quickViewItem} -> ${nextId} (index ${currentIndex} -> ${nextIndex})`);
+    } else {
+      logWarn('MediaViewer', `Current item ${quickViewItem} not found in visibleMediaIds`);
     }
   }, [quickViewItem, visibleMediaIds]);
 
   const handleNavigatePrevious = useCallback(() => {
-    if (!quickViewItem || visibleMediaIds.length === 0) return;
+    if (!quickViewItem || visibleMediaIds.length === 0) {
+      // Debug: log why navigation is not working
+      if (!quickViewItem) {
+        logWarn('MediaViewer', 'Cannot navigate: no quickViewItem');
+      }
+      if (visibleMediaIds.length === 0) {
+        logWarn('MediaViewer', 'Cannot navigate: visibleMediaIds is empty');
+      }
+      return;
+    }
     
     const currentIndex = visibleMediaIds.indexOf(quickViewItem);
     if (currentIndex >= 0) {
@@ -337,6 +364,9 @@ const App: React.FC = () => {
       const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleMediaIds.length - 1;
       const prevId = visibleMediaIds[prevIndex];
       setQuickViewItem(prevId);
+      logDebug('MediaViewer', `Navigating previous: ${quickViewItem} -> ${prevId} (index ${currentIndex} -> ${prevIndex})`);
+    } else {
+      logWarn('MediaViewer', `Current item ${quickViewItem} not found in visibleMediaIds`);
     }
   }, [quickViewItem, visibleMediaIds]);
   
@@ -709,6 +739,7 @@ const App: React.FC = () => {
             onCollectionClick={handleCollectionClick}
             collections={collectionsData?.items as Collection[] || []}
             tags={tagsData || []}
+            onMediaItemsChange={setVisibleMediaIds}
           />
         </ErrorBoundary>
         

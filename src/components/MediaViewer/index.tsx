@@ -92,7 +92,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         playerDispatch({ type: 'TOGGLE_MUTE' });
       }
     }
-  }), [handleClose, handleNavigate, item?.type]);
+  }), [handleClose, handleNavigate, item?.type, canNavigatePrevious, canNavigateNext]);
   
   useMediaKeyboardShortcuts(keyboardHandlers);
   

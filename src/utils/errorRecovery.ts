@@ -5,6 +5,8 @@
  * retry strategies, and connection monitoring.
  */
 
+import { logWarn, logError } from '../services/logger';
+
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -127,7 +129,7 @@ export async function testConnectivity(
     clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
-    console.warn('Connectivity test failed:', error);
+    logWarn('ErrorRecovery', 'Connectivity test failed', error);
     return false;
   }
 }
@@ -178,7 +180,7 @@ export class OfflineDetector {
       try {
         listener(isOnline);
       } catch (error) {
-        console.error('Error in offline detector listener:', error);
+        logError('ErrorRecovery', 'Error in offline detector listener', error);
       }
     });
   }
@@ -401,7 +403,7 @@ export class ErrorRecoveryManager {
   private reportError(error: Error, type: string) {
     this.errorCount++;
     
-    console.error(`[ErrorRecovery] ${type}:`, error);
+    logError('ErrorRecovery', `${type}:`, error);
     
     this.notifyListeners({
       type: 'error-reported',
@@ -419,7 +421,7 @@ export class ErrorRecoveryManager {
       try {
         listener(event);
       } catch (error) {
-        console.error('Error in recovery manager listener:', error);
+        logError('ErrorRecovery', 'Error in recovery manager listener', error);
       }
     });
   }
