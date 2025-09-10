@@ -1,11 +1,14 @@
 using backend.Api;
+using backend.Application.Interfaces;
+using backend.Application.Services;
 using backend.Data;
+using backend.Infrastructure.Middleware;
 using backend.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer; // Added JWT Bearer namespace
-using Microsoft.AspNetCore.Identity; // Added Identity namespace
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens; // Added Token Validation namespace
-using System.Text; // Added Encoding namespace
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Service Configuration ---
@@ -56,6 +59,14 @@ else
 {
     builder.Services.AddSingleton<IFileStorageService, FileSystemStorageService>();
 }
+
+// Register application services
+builder.Services.AddScoped<IMediaService, MediaService>();
+// TODO: Add other services as they are implemented
+// builder.Services.AddScoped<IFolderService, FolderService>();
+// builder.Services.AddScoped<ICollectionService, CollectionService>();
+// builder.Services.AddScoped<ITagService, TagService>();
+// builder.Services.AddScoped<IUserService, UserService>();
 
 // --- Identity & Authentication Configuration ---
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -116,6 +127,10 @@ var app = builder.Build();
 
 // --- HTTP Request Pipeline Configuration ---
 
+// Add custom middleware for logging and error handling
+app.UseRequestLogging(); // Log all requests
+app.UseGlobalExceptionHandler(); // Handle exceptions globally
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -138,9 +153,16 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 
 // --- API Endpoints ---
 // Map the API endpoints defined in separate classes
+
+// Media API with service layer
 app.MapGroup("/api/media")
    .MapMediaApi()
    .WithTags("Media");
+   
+// Versioned API endpoint (v1)
+app.MapGroup("/api/v1/media")
+   .MapMediaApi()
+   .WithTags("Media v1");
 
 app.MapGroup("/api/folders")
    .MapFoldersApi() // Use the extension method from FoldersApi
