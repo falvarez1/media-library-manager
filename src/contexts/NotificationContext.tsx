@@ -1,6 +1,6 @@
 'use client';
 
-import React, {
+import {
   createContext,
   useContext,
   useReducer,
@@ -327,7 +327,7 @@ export function NotificationProvider({
     const timers: NodeJS.Timeout[] = [];
 
     state.notifications.forEach(notification => {
-      if (notification.duration > 0 && !notification.isExiting) {
+      if (notification.duration && notification.duration > 0 && !notification.isExiting) {
         const timeRemaining = notification.duration - (Date.now() - notification.createdAt);
         
         if (timeRemaining > 0) {
@@ -514,13 +514,3 @@ export function useNotificationContext(): NotificationContextValue {
 // ============================================================================
 
 export default NotificationContext;
-export type {
-  Notification,
-  NotificationOptions,
-  NotificationType,
-  NotificationPosition,
-  NotificationState,
-  NotificationAction,
-  NotificationContextValue,
-  NotificationProviderProps
-};

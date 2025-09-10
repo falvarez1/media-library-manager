@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { X, ArrowLeft, ArrowRight, Info, Download, Share } from 'lucide-react';
-import type { MediaItem } from '../../../types';
 import type { MediaViewerHeaderProps } from '../types';
 
 const MediaViewerHeader: React.FC<MediaViewerHeaderProps> = ({

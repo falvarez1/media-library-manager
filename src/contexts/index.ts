@@ -144,7 +144,7 @@ export const Filter = {
  * All UI state-related exports
  */
 import * as UIStateContextModule from './UIStateContext';
-export const UIState = {
+export const UIStateUtils = {
   Provider: UIStateContextModule.UIStateProvider,
   useUIState: UIStateContextModule.useUIState
 } as const;

@@ -5,28 +5,25 @@
  * including common component interfaces and event handlers.
  */
 
-import { ReactNode, MouseEvent, ChangeEvent, FormEvent, KeyboardEvent } from 'react';
+import { ReactNode, MouseEvent, ChangeEvent, KeyboardEvent } from 'react';
 import {
   MediaId,
   FolderId,
   CollectionId,
-  UserId,
   ViewMode,
   GridSize,
   SortField,
   SortOrder,
   Theme,
   BaseComponentProps,
-  LoadingState,
   AsyncState,
   EventHandler,
-  AsyncEventHandler
 } from './common.types';
 
 import { MediaItem, MediaQuery, MediaFilterOptions } from './media.types';
 import { Folder, FolderTree, FolderNavigation } from './folder.types';
-import { Collection, CollectionTree } from './collection.types';
-import { User, UserPreferences } from './auth.types';
+import { Collection } from './collection.types';
+import { User } from './auth.types';
 
 // ============================================================================
 // COMMON COMPONENT PROPS

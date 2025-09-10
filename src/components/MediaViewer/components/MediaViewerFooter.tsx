@@ -4,8 +4,7 @@
  */
 
 import React from 'react';
-import { Star, Heart, Edit, Share, Trash2 } from 'lucide-react';
-import type { MediaItem } from '../../../types';
+import { Star, Heart, Edit, Share } from 'lucide-react';
 import type { MediaViewerFooterProps } from '../types';
 
 const MediaViewerFooter: React.FC<MediaViewerFooterProps> = ({

@@ -107,7 +107,6 @@ function isMediaSpecificError(error: Error): boolean {
 
 function MediaErrorFallback({
   error,
-  errorInfo,
   retry,
   mediaId,
   mediaType,

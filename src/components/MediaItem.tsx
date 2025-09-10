@@ -123,7 +123,7 @@ const MediaItem: React.FC<MediaItemProps> = ({
   className,
   ...props
 }) => {
-  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [, setIsHovered] = useState<boolean>(false);
   
   // Handle quick view button click
   const handleQuickView = (e: MouseEvent<HTMLButtonElement>): void => {

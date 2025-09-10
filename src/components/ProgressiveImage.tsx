@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Image, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 
 // ============================================================================
@@ -456,4 +456,4 @@ export function useProgressiveImage(src: string, lazy = false) {
 
 export default ProgressiveImage;
 
-export type { ProgressiveImageProps, ImageLoadingState };
+export type { ProgressiveImageProps };

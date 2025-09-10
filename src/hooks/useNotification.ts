@@ -495,9 +495,3 @@ export function useApiNotification<T extends any[], R>(
 // ============================================================================
 
 export default useNotification;
-export type {
-  UseNotificationOptions,
-  UseNotificationReturn,
-  QuickNotificationMethods,
-  AsyncNotificationMethods
-};

@@ -95,7 +95,7 @@ class ProviderErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryS
             </button>
           </div>
 
-          <style jsx>{`
+          <style dangerouslySetInnerHTML={{ __html: `
             .error-boundary {
               min-height: 200px;
               padding: 20px;
@@ -162,7 +162,7 @@ class ProviderErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryS
             .error-reload-button:hover {
               background-color: #b91c1c;
             }
-          `}</style>
+          ` }} />
         </div>
       );
     }

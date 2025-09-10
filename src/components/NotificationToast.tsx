@@ -13,8 +13,7 @@ import {
 import {
   useNotificationContext,
   type Notification,
-  type NotificationPosition,
-  ANIMATION_DURATION
+  type NotificationPosition
 } from '../contexts/NotificationContext';
 
 // ============================================================================
@@ -99,27 +98,6 @@ const POSITION_STYLES = {
   'bottom-center': 'bottom-4 left-1/2 transform -translate-x-1/2 items-center flex-col-reverse'
 } as const;
 
-/**
- * Animation classes for enter/exit transitions
- */
-const ANIMATION_CLASSES = {
-  enter: {
-    'top-right': 'animate-slide-in-right',
-    'top-left': 'animate-slide-in-left',
-    'bottom-right': 'animate-slide-in-right',
-    'bottom-left': 'animate-slide-in-left',
-    'top-center': 'animate-slide-in-down',
-    'bottom-center': 'animate-slide-in-up'
-  },
-  exit: {
-    'top-right': 'animate-slide-out-right',
-    'top-left': 'animate-slide-out-left',
-    'bottom-right': 'animate-slide-out-right',
-    'bottom-left': 'animate-slide-out-left',
-    'top-center': 'animate-slide-out-up',
-    'bottom-center': 'animate-slide-out-down'
-  }
-} as const;
 
 // ============================================================================
 // INDIVIDUAL TOAST COMPONENT
@@ -253,7 +231,7 @@ function Toast({ notification, onDismiss, onMouseEnter, onMouseLeave }: ToastPro
       )}
 
       {/* Progress bar for auto-dismiss */}
-      {notification.duration > 0 && !isExiting && (
+      {notification.duration && notification.duration > 0 && !isExiting && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-black bg-opacity-10 rounded-b-lg overflow-hidden">
           <div
             className="h-full bg-current opacity-30 transition-all ease-linear"

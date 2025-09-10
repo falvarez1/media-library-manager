@@ -93,7 +93,6 @@ const DefaultSpinner: React.FC<SpinnerIconProps> = ({ size, className }) => (
  */
 const DotsSpinner: React.FC<SpinnerIconProps> = ({ size, className }) => {
   const dotSize = Math.max(2, size / 8);
-  const spacing = size / 6;
   
   return (
     <div 
@@ -197,7 +196,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   onDelayComplete
 }) => {
   const [isVisible, setIsVisible] = React.useState(delay === 0);
-  const timeoutRef = React.useRef<NodeJS.Timeout>();
+  const timeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Handle delay before showing spinner
   React.useEffect(() => {
@@ -383,7 +382,7 @@ export const MiniLoader: React.FC<{ className?: string }> = ({ className = '' })
 export function useLoadingState(initialLoading = false, delay = 300) {
   const [isLoading, setIsLoading] = React.useState(initialLoading);
   const [showSpinner, setShowSpinner] = React.useState(false);
-  const timeoutRef = React.useRef<NodeJS.Timeout>();
+  const timeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   React.useEffect(() => {
     if (isLoading) {

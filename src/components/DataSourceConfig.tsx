@@ -36,16 +36,16 @@ const DataSourceConfig: React.FC<DataSourceConfigProps> = ({
   className, 
   testId 
 }) => {
-  const { isUsingRealApi, apiBaseUrl, dataSource, config: currentConfig } = useDataSource();
+  const { isUsingRealApi, apiBaseUrl, config: currentConfig } = useDataSource();
   
   // Local state for form values
   const [formValues, setFormValues] = useState<DataSourceFormValues>({
     useRealApi: isUsingRealApi,
     apiBaseUrl: apiBaseUrl,
-    mockDelayMin: currentConfig.mock.delay.min,
-    mockDelayMax: currentConfig.mock.delay.max,
-    mockDelayFixed: currentConfig.mock.delay.fixed || '',
-    mockErrorRate: currentConfig.mock.errorRate,
+    mockDelayMin: currentConfig.mock?.delay?.min || 100,
+    mockDelayMax: currentConfig.mock?.delay?.max || 500,
+    mockDelayFixed: currentConfig.mock?.delay?.fixed || '',
+    mockErrorRate: currentConfig.mock?.errorRate || 0,
     saved: false
   });
 
@@ -54,10 +54,10 @@ const DataSourceConfig: React.FC<DataSourceConfigProps> = ({
     setFormValues({
       useRealApi: isUsingRealApi,
       apiBaseUrl: apiBaseUrl,
-      mockDelayMin: currentConfig.mock.delay.min,
-      mockDelayMax: currentConfig.mock.delay.max,
-      mockDelayFixed: currentConfig.mock.delay.fixed || '',
-      mockErrorRate: currentConfig.mock.errorRate,
+      mockDelayMin: currentConfig.mock?.delay?.min || 100,
+      mockDelayMax: currentConfig.mock?.delay?.max || 500,
+      mockDelayFixed: currentConfig.mock?.delay?.fixed || '',
+      mockErrorRate: currentConfig.mock?.errorRate || 0,
       saved: false
     });
   }, [isUsingRealApi, apiBaseUrl, currentConfig]);

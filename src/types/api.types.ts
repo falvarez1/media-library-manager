@@ -10,11 +10,9 @@ import {
   FolderId,
   CollectionId,
   UserId,
-  TagId,
   ISO8601String,
   ApiResponse,
   PaginatedResponse,
-  BaseQuery,
   ApiError
 } from './common.types';
 
@@ -38,6 +36,16 @@ export interface ApiConfig {
   defaultHeaders: Record<string, string>;
   withCredentials: boolean;
   apiVersion: string;
+  
+  // Mock configuration (optional, for compatibility with ServiceConfig)
+  mock?: {
+    delay: {
+      min: number;
+      max: number;
+      fixed: number | null;
+    };
+    errorRate: number;
+  };
 }
 
 /**

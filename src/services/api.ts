@@ -3,7 +3,7 @@
  * Re-exports the API from the api subfolder
  */
 
-import api from './api/index';
+import { api } from "./api/index";
 
 export default api;
-export * from './api/index';
+export * from "./api/index";

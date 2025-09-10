@@ -16,7 +16,7 @@ import {
   Loader
 } from 'lucide-react';
 import { useMediaItem } from '../hooks/useApi';
-import { MediaId, MediaItem, BaseComponentProps } from '../types';
+import { MediaId, BaseComponentProps } from '../types';
 
 interface MediaEditorProps extends BaseComponentProps {
   mediaId: MediaId;

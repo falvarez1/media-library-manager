@@ -5,24 +5,18 @@ import {
   Monitor, 
   Grid3x3, 
   List, 
-  Clock, 
   Eye, 
   Save, 
-  Sliders, 
-  FileText, 
-  LayoutGrid, 
-  Volume2
+  Sliders
 } from 'lucide-react';
 import {
   BaseComponentProps,
   ViewMode,
-  GridSize,
   SortField,
   SortOrder,
   Theme,
   EventHandler,
   ChangeEvent,
-  MouseEvent
 } from '../types';
 
 // ============================================================================
@@ -133,9 +127,6 @@ const UserPreferences: React.FC<UserPreferencesProps> = ({
     handleChange('thumbnailSize', e.target.value as ThumbnailSize);
   };
 
-  const handleShowFileExtensionsChange: EventHandler<ChangeEvent<HTMLInputElement>> = (e) => {
-    handleChange('showFileExtensions', e.target.checked);
-  };
 
   const handleThemeChange = (theme: Theme): void => {
     handleChange('theme', theme);

@@ -13,87 +13,113 @@ const baseApi = API_CONFIG.useMockData ? mockApi : realApi;
 // Create normalized API structure that works with both mock and real APIs
 const normalizedMediaApi = API_CONFIG.useMockData ? {
   // Mock API already has these methods
-  getMedia: baseApi.media.getMedia,
-  getMediaById: baseApi.media.getMediaById,
-  createMedia: baseApi.media.createMedia,
-  updateMedia: baseApi.media.updateMedia,
-  deleteMedia: baseApi.media.deleteMedia,
-  toggleStar: baseApi.media.toggleStar,
-  toggleFavorite: baseApi.media.toggleFavorite,
-  batchUpdateMedia: baseApi.media.batchUpdateMedia,
-  batchDeleteMedia: baseApi.media.batchDeleteMedia,
-  getMediaStats: baseApi.media.getMediaStats
+  getMedia: (baseApi.media as any).getMedia,
+  getMediaById: (baseApi.media as any).getMediaById,
+  createMedia: (baseApi.media as any).createMedia,
+  updateMedia: (baseApi.media as any).updateMedia,
+  deleteMedia: (baseApi.media as any).deleteMedia,
+  toggleStar: (baseApi.media as any).toggleStar,
+  toggleFavorite: (baseApi.media as any).toggleFavorite,
+  batchUpdateMedia: (baseApi.media as any).batchUpdateMedia,
+  batchDeleteMedia: (baseApi.media as any).batchDeleteMedia,
+  getMediaStats: (baseApi.media as any).getMediaStats
 } : {
   // Map real API methods to mock API naming convention
-  getMedia: baseApi.media.list,
-  getMediaById: baseApi.media.get,
-  createMedia: baseApi.media.create,
-  updateMedia: baseApi.media.update,
-  deleteMedia: baseApi.media.delete,
-  toggleStar: baseApi.media.toggleStar,
-  toggleFavorite: baseApi.media.toggleFavorite,
-  batchUpdateMedia: baseApi.media.batchTag,
-  batchDeleteMedia: baseApi.media.batchDelete,
+  getMedia: (baseApi.media as any).list,
+  getMediaById: (baseApi.media as any).get,
+  createMedia: (baseApi.media as any).create,
+  updateMedia: (baseApi.media as any).update,
+  deleteMedia: (baseApi.media as any).delete,
+  toggleStar: (baseApi.media as any).toggleStar,
+  toggleFavorite: (baseApi.media as any).toggleFavorite,
+  batchUpdateMedia: (baseApi.media as any).batchTag,
+  batchDeleteMedia: (baseApi.media as any).batchDelete,
   getMediaStats: async () => ({ data: { totalCount: 0 } }) // Not implemented in real API
 };
 
 const normalizedFoldersApi = API_CONFIG.useMockData ? {
-  getFolders: baseApi.folders.getFolders,
-  getFolderById: baseApi.folders.getFolderById,
-  createFolder: baseApi.folders.createFolder,
-  updateFolder: baseApi.folders.updateFolder,
-  deleteFolder: baseApi.folders.deleteFolder,
-  getFolderTree: baseApi.folders.getFolderTree,
-  getFolderContents: baseApi.folders.getFolderContents
+  getFolders: (baseApi.folders as any).getFolders,
+  getFolderById: (baseApi.folders as any).getFolderById,
+  createFolder: (baseApi.folders as any).createFolder,
+  updateFolder: (baseApi.folders as any).updateFolder,
+  deleteFolder: (baseApi.folders as any).deleteFolder,
+  getFolderTree: (baseApi.folders as any).getFolderTree || (baseApi.folders as any).getTree,
+  getFolderContents: (baseApi.folders as any).getFolderContents
 } : {
-  getFolders: baseApi.folders.list,
-  getFolderById: baseApi.folders.get,
-  createFolder: baseApi.folders.create,
-  updateFolder: baseApi.folders.update,
-  deleteFolder: baseApi.folders.delete,
-  getFolderTree: baseApi.folders.getTree,
-  getFolderContents: baseApi.folders.getContents
+  getFolders: (baseApi.folders as any).list,
+  getFolderById: (baseApi.folders as any).get,
+  createFolder: (baseApi.folders as any).create,
+  updateFolder: (baseApi.folders as any).update,
+  deleteFolder: (baseApi.folders as any).delete,
+  getFolderTree: (baseApi.folders as any).getTree,
+  getFolderContents: (baseApi.folders as any).getContents
 };
 
 const normalizedCollectionsApi = API_CONFIG.useMockData ? {
-  getCollections: baseApi.collections.getCollections,
-  getCollectionById: baseApi.collections.getCollectionById,
-  createCollection: baseApi.collections.createCollection,
-  updateCollection: baseApi.collections.updateCollection,
-  deleteCollection: baseApi.collections.deleteCollection,
-  addItemsToCollection: baseApi.collections.addItemsToCollection,
-  removeItemsFromCollection: baseApi.collections.removeItemsFromCollection
+  getCollections: (baseApi.collections as any).getCollections,
+  getCollectionById: (baseApi.collections as any).getCollectionById,
+  createCollection: (baseApi.collections as any).createCollection,
+  updateCollection: (baseApi.collections as any).updateCollection,
+  deleteCollection: (baseApi.collections as any).deleteCollection,
+  addItemsToCollection: (baseApi.collections as any).addItemsToCollection || (baseApi.collections as any).addToCollection,
+  removeItemsFromCollection: (baseApi.collections as any).removeItemsFromCollection || (baseApi.collections as any).removeFromCollection,
+  getCollectionContents: (baseApi.collections as any).getCollectionContents || (baseApi.collections as any).getContents
 } : {
-  getCollections: baseApi.collections.list,
-  getCollectionById: baseApi.collections.get,
-  createCollection: baseApi.collections.create,
-  updateCollection: baseApi.collections.update,
-  deleteCollection: baseApi.collections.delete,
-  addItemsToCollection: baseApi.collections.addItems,
-  removeItemsFromCollection: baseApi.collections.removeItems
+  getCollections: (baseApi.collections as any).list,
+  getCollectionById: (baseApi.collections as any).get,
+  createCollection: (baseApi.collections as any).create,
+  updateCollection: (baseApi.collections as any).update,
+  deleteCollection: (baseApi.collections as any).delete,
+  addItemsToCollection: (baseApi.collections as any).addItems,
+  removeItemsFromCollection: (baseApi.collections as any).removeItems,
+  getCollectionContents: (baseApi.collections as any).getContents
 };
 
-const normalizedTagsApi = API_CONFIG.useMockData ? baseApi.tags : {
-  getTags: baseApi.tags.list,
-  getTagById: baseApi.tags.get,
-  createTag: baseApi.tags.create,
-  updateTag: baseApi.tags.update,
-  deleteTag: baseApi.tags.delete,
-  // Add mock-specific methods with fallbacks
-  getTagCategories: async () => ({ data: [] }),
-  createTagCategory: async (data: any) => ({ data }),
-  updateTagCategory: async (id: string, data: any) => ({ data: { id, ...data } }),
-  deleteTagCategory: async () => ({ data: { success: true } }),
-  getPopularTags: async () => ({ data: [] }),
-  getTagSuggestions: async () => ({ data: [] }),
-  batchUpdateTags: async () => ({ data: { success: true, updatedCount: 0 } })
+// Normalize tags API - both mock and real should use the same interface
+const normalizedTagsApi = API_CONFIG.useMockData ? {
+  // Map mock API methods to normalized names
+  getTags: (baseApi.tags as any).getTags,
+  getTagById: (baseApi.tags as any).getTagById,
+  createTag: (baseApi.tags as any).createTag,
+  updateTag: (baseApi.tags as any).updateTag,
+  deleteTag: (baseApi.tags as any).deleteTag,
+  getTagCategories: (baseApi.tags as any).getTagCategories,
+  createTagCategory: (baseApi.tags as any).createTagCategory,
+  updateTagCategory: (baseApi.tags as any).updateTagCategory,
+  deleteTagCategory: (baseApi.tags as any).deleteTagCategory,
+  getPopularTags: (baseApi.tags as any).getPopularTags,
+  getTagSuggestions: (baseApi.tags as any).getTagSuggestions,
+  batchUpdateTags: (baseApi.tags as any).batchUpdateTags
+} : {
+  // Map real API methods to normalized names
+  getTags: (baseApi.tags as any).list || (() => Promise.resolve({ data: [] })),
+  getTagById: (baseApi.tags as any).get || (() => Promise.resolve({ data: null })),
+  createTag: (baseApi.tags as any).create || (() => Promise.resolve({ data: null })),
+  updateTag: (baseApi.tags as any).update || (() => Promise.resolve({ data: null })),
+  deleteTag: (baseApi.tags as any).delete || (() => Promise.resolve({ data: null })),
+  // Add mock-specific methods with fallbacks for real API
+  getTagCategories: (baseApi.tags as any).getTagCategories || (async () => ({ data: [] })),
+  createTagCategory: (baseApi.tags as any).createTagCategory || (async (data: any) => ({ data })),
+  updateTagCategory: (baseApi.tags as any).updateTagCategory || (async (id: string, data: any) => ({ data: { id, ...data } })),
+  deleteTagCategory: (baseApi.tags as any).deleteTagCategory || (async () => ({ data: { success: true } })),
+  getPopularTags: (baseApi.tags as any).getPopularTags || (async () => ({ data: [] })),
+  getTagSuggestions: (baseApi.tags as any).getTagSuggestions || (async () => ({ data: [] })),
+  batchUpdateTags: (baseApi.tags as any).batchUpdateTags || (async () => ({ data: { success: true, updatedCount: 0 } }))
 };
 
-const normalizedUsersApi = API_CONFIG.useMockData ? baseApi.users : {
-  getCurrentUser: baseApi.users.getCurrent,
-  updateUser: baseApi.users.update,
-  getPreferences: baseApi.users.getPreferences,
-  updatePreferences: baseApi.users.updatePreferences
+// Normalize users API
+const normalizedUsersApi = API_CONFIG.useMockData ? {
+  // Mock API uses these names
+  getCurrentUser: (baseApi.users as any).getCurrentUser,
+  updateUser: (baseApi.users as any).updateUser,
+  getPreferences: (baseApi.users as any).getPreferences,
+  updatePreferences: (baseApi.users as any).updatePreferences
+} : {
+  // Real API uses these names
+  getCurrentUser: (baseApi.users as any).getCurrent || (() => Promise.resolve({ data: null })),
+  updateUser: (baseApi.users as any).update || (() => Promise.resolve({ data: null })),
+  getPreferences: (baseApi.users as any).getPreferences || (() => Promise.resolve({ data: {} })),
+  updatePreferences: (baseApi.users as any).updatePreferences || (() => Promise.resolve({ data: {} }))
 };
 
 // Ensure consistent API structure
@@ -103,7 +129,7 @@ export const api = {
   collections: normalizedCollectionsApi,
   tags: normalizedTagsApi,
   users: normalizedUsersApi,
-  mediaOperations: baseApi.mediaOperations || {},
+  mediaOperations: (baseApi as any).mediaOperations || {},
   auth: (baseApi as any).auth || undefined
 };
 
@@ -118,19 +144,15 @@ export const authApi = api.auth;
 // Export configuration helpers
 export { API_CONFIG, buildApiUrl, getAuthHeaders, apiRequest } from '../../config/api.config';
 
-// Helper to switch between mock and real API at runtime
-export function switchApiMode(useMock: boolean) {
-  // Store preference in localStorage
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('mlm-use-mock-data', useMock.toString());
-    // Reload to apply changes
-    window.location.reload();
-  }
-}
-
-// Helper to check current API mode
-export function isUsingMockApi(): boolean {
+// Helper functions for API mode management
+export const isUsingMockApi = (): boolean => {
   return API_CONFIG.useMockData;
-}
+};
 
-export default api;
+export const switchApiMode = (useMockApi: boolean): void => {
+  API_CONFIG.useMockData = useMockApi;
+  // Store preference in localStorage for persistence
+  if (typeof window !== "undefined") {
+    localStorage.setItem("useMockApi", JSON.stringify(useMockApi));
+  }
+};

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { 
+import { 
   createContext, 
   useContext, 
   useCallback, 
@@ -714,4 +714,3 @@ export function useNavigationBreadcrumbs() {
 export default NavigationContext;
 
 // Export types for external use
-export type { NavigationContextValue, NavigationState, NavigationView };

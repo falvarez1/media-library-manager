@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Plus, Check, Tag } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useTags, useTagSuggestions } from '../hooks/useApi';
 import {
   TagId,
   BaseComponentProps,
   EventHandler,
   ChangeEvent,
-  KeyboardEvent,
-  MouseEvent
+  KeyboardEvent
 } from '../types';
 
 // ============================================================================
@@ -31,14 +30,6 @@ interface TagSelectorProps extends BaseComponentProps {
   placeholder?: string;
 }
 
-interface TagSuggestionsQuery {
-  sortBy?: string;
-  sortDir?: string;
-}
-
-interface TagSuggestionsOptions {
-  limit?: number;
-}
 
 // ============================================================================
 // COMPONENT
@@ -62,8 +53,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch all tags for display
-  const tagsQuery: TagSuggestionsQuery = { sortBy: 'count', sortDir: 'desc' };
-  const { data: allTagsRaw, loading: tagsLoading } = useTags(tagsQuery);
+  const { data: allTagsRaw, loading: tagsLoading } = useTags({});
   // Transform service Tag[] to TagInfo[] that the component expects
   const allTags: TagInfo[] = (allTagsRaw || []).map(tag => ({
     id: tag.id,
@@ -73,10 +63,9 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   }));
   
   // Fetch tag suggestions based on input
-  const suggestionsOptions: TagSuggestionsOptions = { limit: 8 };
   const { data: suggestionsRaw, loading: suggestionsLoading } = useTagSuggestions(
     inputValue,
-    suggestionsOptions,
+    {},
     [inputValue]
   );
   // Transform TagSuggestion[] to TagInfo[] if necessary

@@ -13,9 +13,8 @@
  * - TypeScript support
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug, ChevronDown, ChevronUp } from 'lucide-react';
-import type { ExtendedApiError } from '../types';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -169,7 +168,6 @@ function DefaultErrorFallback({
   retryCount,
   showDetails,
   level,
-  name,
   onRetry,
   onToggleDetails,
   onGoHome,

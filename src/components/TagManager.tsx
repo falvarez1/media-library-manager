@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, Search, Edit, Trash2, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Search, Edit, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTags, useTagCategories, useCreateTag, useUpdateTag, useDeleteTag, useCreateTagCategory, useUpdateTagCategory } from '../hooks/useApi';
 import {
   TagId,
@@ -9,7 +9,6 @@ import {
   EventHandler,
   ChangeEvent,
   FormEvent,
-  MouseEvent
 } from '../types';
 
 // ============================================================================

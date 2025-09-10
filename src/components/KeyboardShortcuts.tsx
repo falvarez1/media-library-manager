@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { X, Keyboard } from 'lucide-react';
 import { BaseComponentProps } from '../types';
 

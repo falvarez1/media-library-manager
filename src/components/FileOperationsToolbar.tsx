@@ -6,7 +6,6 @@ import {
   Trash2, 
   Download, 
   Share, 
-  Tag, 
   CheckSquare, 
   Square, 
   Folder, 
@@ -14,7 +13,6 @@ import {
   ArrowDownWideNarrow, 
   ArrowUpWideNarrow,
   Filter,
-  Save,
   FileUp,
   Loader,
   AlertCircle
@@ -47,10 +45,6 @@ interface FileOperationsToolbarProps {
   sortOrder?: SortOrder;
   currentFolder?: FolderId | string | null;
   currentView?: ViewMode | string;
-  onFolderSelected?: (folderId: FolderId) => void;
-  onExportComplete?: (result: any) => void;
-  onShareComplete?: (result: any) => void;
-  onOperationComplete?: (operation: string, mediaIds: MediaId[], folderId: FolderId) => void;
 }
 
 // Operation type
@@ -65,18 +59,13 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
   onSortChange,
   sortBy = 'name',
   sortOrder = 'asc',
-  currentFolder,
-  currentView,
-  onFolderSelected,
-  onExportComplete,
-  onShareComplete,
-  onOperationComplete
+  currentFolder
 }) => {
   // Hooks for media operations
-  const { mutate: moveMedia, loading: moveLoading, error: moveError } = useMoveMedia();
-  const { mutate: copyMedia, loading: copyLoading, error: copyError } = useCopyMedia();
-  const { mutate: exportMedia, loading: exportLoading, error: exportError } = useExportMedia();
-  const { mutate: shareMedia, loading: shareLoading, error: shareError } = useShareMedia();
+  const { mutate: moveMedia, loading: moveLoading } = useMoveMedia();
+  const { mutate: copyMedia, loading: copyLoading } = useCopyMedia();
+  const { mutate: exportMedia, loading: exportLoading } = useExportMedia();
+  const { mutate: shareMedia, loading: shareLoading } = useShareMedia();
   
   // State for folder selector
   const [showFolderSelector, setShowFolderSelector] = useState<boolean>(false);
@@ -159,7 +148,7 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
     }
     
     try {
-      const result = await exportMedia({ 
+      await exportMedia({ 
         mediaIds: selectedMedia, 
         options: {
           format: 'zip',
@@ -184,11 +173,11 @@ const FileOperationsToolbar: React.FC<FileOperationsToolbarProps> = ({
     }
     
     try {
-      const result = await shareMedia({ 
+      await shareMedia({ 
         mediaIds: selectedMedia, 
         shareOptions: {
-          permissions: 'view',
-          expiryDays: 7
+          permissions: ['view'],
+          expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         }
       });
       

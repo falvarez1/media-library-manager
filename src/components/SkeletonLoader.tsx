@@ -239,8 +239,6 @@ export const SkeletonThumbnail: React.FC<BaseSkeletonProps & {
       className={`${aspectClasses[aspectRatio]} ${className}`}
       rounded={rounded}
       width={size}
-      role="status"
-      aria-label="Loading thumbnail..."
       {...props}
     />
   );
@@ -407,7 +405,6 @@ export const SidebarSkeleton: React.FC<SidebarSkeletonProps> = ({
             <Skeleton
               variant={variant}
               className="h-4 flex-1"
-              lastLineWidth="70%"
               {...props}
             />
           </div>
@@ -443,7 +440,6 @@ export const SidebarSkeleton: React.FC<SidebarSkeletonProps> = ({
                 <Skeleton
                   variant={variant}
                   className="h-3 flex-1"
-                  lastLineWidth={`${60 + Math.random() * 30}%`}
                   {...props}
                 />
               </div>
@@ -672,5 +668,5 @@ Add to your global CSS file (globals.css):
 // EXPORTS
 // ============================================================================
 
-export default SkeletonLoader;
-export type { SkeletonLoaderProps };
+export default Skeleton;
+export type { SkeletonProps };

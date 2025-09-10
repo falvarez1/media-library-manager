@@ -141,8 +141,8 @@ const App: React.FC = () => {
   const [showImageEditor, setShowImageEditor] = useState<boolean>(false);
   
   // Track starred and favorited items locally
-  const [starredItems, setStarredItems] = useState<Set<MediaId>>(new Set());
-  const [favoritedItems, setFavoritedItems] = useState<Set<MediaId>>(new Set());
+  const [, setStarredItems] = useState<Set<MediaId>>(new Set());
+  const [, setFavoritedItems] = useState<Set<MediaId>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
   const [showNewCollectionModal, setShowNewCollectionModal] = useState<boolean>(false);
@@ -674,11 +674,6 @@ const App: React.FC = () => {
         sortOrder={sortOrder}
         currentFolder={currentFolder}
         currentView={currentView}
-        onFolderSelected={handleFolderClick}
-        onOperationComplete={() => {
-          // Refresh the view after operations
-          setSelectedMedia([]);
-        }}
       />
 
       {/* Main content area */}
@@ -708,14 +703,12 @@ const App: React.FC = () => {
             selectedMedia={selectedMedia as MediaId[]}
             onSelect={handleMediaSelect}
             onQuickView={handleQuickView}
-            onOpenEditor={openEditor}
             onToggleStar={handleToggleStar}
             onToggleFavorite={handleToggleFavorite}
             onFolderClick={handleFolderClick}
             onCollectionClick={handleCollectionClick}
             collections={collectionsData?.items as Collection[] || []}
             tags={tagsData || []}
-            onUpdateCollection={handleUpdateCollection}
           />
         </ErrorBoundary>
         

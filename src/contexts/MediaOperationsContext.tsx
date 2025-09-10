@@ -1,6 +1,6 @@
 'use client';
 
-import React, { 
+import { 
   createContext, 
   useContext, 
   useCallback, 
@@ -11,7 +11,6 @@ import React, {
 } from 'react';
 import { 
   MediaId,
-  FolderId,
   ISO8601String 
 } from '../types';
 import {
@@ -850,4 +849,3 @@ export function useOperationsByType(type: ActiveOperation['type']): ActiveOperat
 export default MediaOperationsContext;
 
 // Export types for external use (avoid conflicts by not re-exporting already exported interfaces)
-export type { MediaOperationsProviderProps };

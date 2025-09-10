@@ -6,7 +6,6 @@
  */
 
 import React, { useReducer, useCallback, useMemo, Suspense, lazy } from 'react';
-import { X, ArrowLeft, ArrowRight, Loader } from 'lucide-react';
 import { useMediaItem } from '../../hooks/useApi';
 import { useMediaKeyboardShortcuts } from './hooks/useMediaKeyboardShortcuts';
 import { usePreloadAdjacentMedia } from './hooks/usePreloadAdjacentMedia';
@@ -15,7 +14,6 @@ import MediaViewerHeader from './components/MediaViewerHeader';
 import MediaViewerFooter from './components/MediaViewerFooter';
 import MediaViewerSkeleton from './components/MediaViewerSkeleton';
 import MediaViewerError from './components/MediaViewerError';
-import type { MediaId } from '../../types';
 import type { MediaViewerProps } from './types';
 
 // Lazy load media type components for better performance
@@ -60,7 +58,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   });
   
   // Preload adjacent media for smooth navigation
-  usePreloadAdjacentMedia(mediaId, onNavigateNext, onNavigatePrevious);
+  usePreloadAdjacentMedia(mediaId);
   
   // Memoized callbacks to prevent unnecessary re-renders
   const handleClose = useCallback(() => {

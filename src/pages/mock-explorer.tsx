@@ -7,21 +7,10 @@ import {
 import api from '../mocks/api';
 import { mockData } from '../mocks';
 import DataSourceConfig from '../components/DataSourceConfig';
-import {
-  ReactNode,
-  MouseEvent,
-  ChangeEvent
-} from 'react';
 import { 
-  MediaItem, 
-  Folder, 
-  Collection, 
-  User,
   MediaId,
   FolderId,
-  CollectionId,
-  UserId,
-  TagId
+  UserId
 } from '../types';
 
 // Define component prop interfaces
@@ -295,7 +284,7 @@ const DataCard: React.FC<DataCardProps> = ({ title, count, description, link }) 
 const MediaSection: React.FC<MediaSectionProps> = ({ mediaId }) => {
   const { data: mediaList, loading: listLoading } = useApi(api.media.getMedia);
   const { data: mediaItem, loading: itemLoading } = useApi(
-    () => mediaId ? api.media.getMediaById(mediaId) : Promise.resolve(null),
+    () => mediaId ? api.media.getMediaById(mediaId as MediaId) : Promise.resolve(null),
     [mediaId]
   );
 
@@ -481,9 +470,9 @@ const MediaSection: React.FC<MediaSectionProps> = ({ mediaId }) => {
 
 // Folders section
 const FoldersSection: React.FC<FoldersSectionProps> = ({ folderId }) => {
-  const { data: folderTree, loading: treeLoading } = useApi(api.folders.getFolderTree);
+  const { data: folderTree, loading: treeLoading } = useApi((api.folders as any).getFolderTree || (api.folders as any).getTree || (() => Promise.resolve([])));
   const { data: folderContent, loading: contentLoading } = useApi(
-    () => folderId ? api.folders.getFolderContents(folderId) : Promise.resolve(null), 
+    () => folderId ? api.folders.getFolderContents(folderId as FolderId) : Promise.resolve(null), 
     [folderId]
   );
 
@@ -645,7 +634,7 @@ const FolderTreeItem: React.FC<FolderTreeItemProps> = ({ folder, level }) => {
 const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId }) => {
   const { data: collections, loading: collectionsLoading } = useApi(api.collections.getCollections);
   const { data: collectionContent, loading: contentLoading } = useApi(
-    () => collectionId ? api.collections.getCollectionContents(collectionId) : Promise.resolve(null), 
+    () => collectionId ? ((api.collections as any).getCollectionContents?.(collectionId) || (api.collections as any).getContents?.(collectionId) || Promise.resolve(null)) : Promise.resolve(null), 
     [collectionId]
   );
 
@@ -707,7 +696,7 @@ const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId })
             <div className="mb-6">
               <span className="text-xs text-gray-500 block mb-1">Shared with</span>
               <div className="flex -space-x-2">
-                {collectionContent.collection.sharedWith.map((userId: string, index: number) => {
+                {collectionContent.collection.sharedWith.map((userId: string) => {
                   const user = mockData.users.find((u: any) => u.id === userId);
                   return (
                     <div 
@@ -817,7 +806,7 @@ const CollectionsSection: React.FC<CollectionsSectionProps> = ({ collectionId })
 const TagsSection: React.FC<TagsSectionProps> = ({ tagId }) => {
   const { data: tags, loading: tagsLoading } = useApi(api.tags.getTags);
   const { data: tagMedia, loading: mediaLoading } = useApi(
-    () => tagId ? api.tags.getMediaWithTag(tagId) : Promise.resolve(null), 
+    () => tagId ? ((api.tags as any).getMediaWithTag?.(tagId) || Promise.resolve([])) : Promise.resolve(null), 
     [tagId]
   );
 
@@ -931,7 +920,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({ tagId }) => {
 const UsersSection: React.FC<UsersSectionProps> = ({ userId }) => {
   const { data: users, loading: usersLoading } = useApi(api.users.getUsers);
   const { data: user, loading: userLoading } = useApi(
-    () => userId ? api.users.getUserById(userId) : Promise.resolve(null), 
+    () => userId ? api.users.getUserById(userId as UserId) : Promise.resolve(null), 
     [userId]
   );
 
@@ -1124,13 +1113,13 @@ const ApiTestSection: React.FC = () => {
     { id: 'dataSource', name: 'Data Source Info', fn: () => Promise.resolve({ data: {
       isUsingRealApi,
       dataSource,
-      apiBaseUrl: config.apiBaseUrl,
+      apiBaseUrl: (config as any).apiBaseUrl || (config as any).baseUrl,
       config
     }}) },
     { id: 'getMedia', name: 'Get Media List', fn: () => api.media.getMedia() },
-    { id: 'getMediaById', name: 'Get Media Item', fn: () => api.media.getMediaById('1') },
+    { id: 'getMediaById', name: 'Get Media Item', fn: () => api.media.getMediaById('1' as MediaId) },
     { id: 'getFolders', name: 'Get Folders', fn: () => api.folders.getFolders() },
-    { id: 'getFolderContents', name: 'Get Folder Contents', fn: () => api.folders.getFolderContents('5') },
+    { id: 'getFolderContents', name: 'Get Folder Contents', fn: () => api.folders.getFolderContents('5' as FolderId) },
     { id: 'getCollections', name: 'Get Collections', fn: () => api.collections.getCollections() },
     { id: 'getTags', name: 'Get Tags', fn: () => api.tags.getTags() },
     { id: 'getCurrentUser', name: 'Get Current User', fn: () => api.users.getCurrentUser() }
@@ -1164,7 +1153,7 @@ const ApiTestSection: React.FC = () => {
             </span>
           </div>
           <div className="text-sm text-blue-700">
-            Currently using {isUsingRealApi ? 'real' : 'mock'} data from {isUsingRealApi ? config.apiBaseUrl : 'mock dataset'}
+            Currently using {isUsingRealApi ? 'real' : 'mock'} data from {isUsingRealApi ? ((config as any).apiBaseUrl || (config as any).baseUrl) : 'mock dataset'}
           </div>
         </div>
       </div>

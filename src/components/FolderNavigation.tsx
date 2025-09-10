@@ -10,11 +10,10 @@ import CollectionModal from './CollectionModal';
 import {
   useFolders, useCollections, useTags, useTagCategories,
   useCreateFolder, useUpdateFolder, useDeleteFolder,
-  useCreateCollection, useUpdateCollection, useDeleteCollection
+  useCreateCollection
 } from '../hooks/useApi';
 import {
   FolderId,
-  CollectionId,
   Folder,
   Collection,
   ViewMode,
@@ -66,9 +65,9 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   const {
     currentFolder: contextCurrentFolder,
     currentView, 
-    currentCollection,
+    // currentCollection,
     navigateToFolder,
-    navigateToCollection,
+    // navigateToCollection,
     setCurrentView
   } = useNavigation();
   
@@ -122,8 +121,6 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
   
   // Collection operation hooks
   const { mutate: createCollection } = useCreateCollection();
-  const { mutate: updateCollection } = useUpdateCollection();
-  const { mutate: deleteCollection } = useDeleteCollection();
   
   // Toggle folder expansion
   const toggleFolder = (folderId: string): void => {
@@ -302,25 +299,23 @@ const FolderNavigation: React.FC<FolderNavigationProps> = ({
     }
   };
   
-  const handleUpdateCollection = async (id: CollectionId, updates: Partial<Collection>): Promise<void> => {
-    try {
-      await updateCollection({ id, updates });
-      refetchCollections();
-    } catch (error) {
-      // Failed to update collection
-      console.error('Failed to update collection:', error);
-    }
-  };
+  // const handleUpdateCollection = async (id: CollectionId, updates: Partial<Collection>): Promise<void> => {
+  //   try {
+  //     await updateCollection({ id, updates });
+  //     refetchCollections();
+  //   } catch (error) {
+  //     console.error('Failed to update collection:', error);
+  //   }
+  // };
   
-  const handleDeleteCollection = async (id: CollectionId): Promise<void> => {
-    try {
-      await deleteCollection({ id, options: { deleteChildren: true } });
-      refetchCollections();
-    } catch (error) {
-      // Failed to delete collection
-      console.error('Failed to delete collection:', error);
-    }
-  };
+  // const handleDeleteCollection = async (id: CollectionId): Promise<void> => {
+  //   try {
+  //     await deleteCollection({ id });
+  //     refetchCollections();
+  //   } catch (error) {
+  //     console.error('Failed to delete collection:', error);
+  //   }
+  // };
   
   // Handle tag filtering
   const handleTagsChange = (tags: string[]): void => {

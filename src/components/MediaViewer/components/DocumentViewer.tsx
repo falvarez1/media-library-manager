@@ -62,16 +62,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ item, onDownload }) => 
           <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.name}</h3>
           <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
             <span>{item.size}</span>
-            {item.metadata?.pages && (
+            {item.metadata && 'pages' in item.metadata && (
               <>
                 <span>•</span>
                 <span>{item.metadata.pages} pages</span>
               </>
             )}
-            {item.metadata?.modifiedAt && (
+            {item.updatedAt && (
               <>
                 <span>•</span>
-                <span>Modified: {new Date(item.metadata.modifiedAt).toLocaleDateString()}</span>
+                <span>Modified: {new Date(item.updatedAt).toLocaleDateString()}</span>
               </>
             )}
           </div>

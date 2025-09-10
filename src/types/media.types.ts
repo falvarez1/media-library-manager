@@ -8,7 +8,6 @@
 import {
   MediaId,
   FolderId,
-  TagId,
   ISO8601String,
   DateString,
   Status,
@@ -103,6 +102,7 @@ export interface MediaItem extends TimestampFields {
   name: string;
   folder: FolderId;
   path: string;
+  updatedAt?: ISO8601String; // Alias for modified, used in some components
   size: string; // Formatted size (e.g., "2.4 MB")
   sizeBytes?: number; // Size in bytes
   dimensions?: string; // Formatted dimensions (e.g., "1920 x 1080")

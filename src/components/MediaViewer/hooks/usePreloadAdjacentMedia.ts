@@ -6,9 +6,7 @@ import { useEffect, useRef } from 'react';
 import type { MediaId } from '../../../types';
 
 export const usePreloadAdjacentMedia = (
-  currentId: MediaId,
-  onNavigateNext?: () => void,
-  onNavigatePrevious?: () => void
+  currentId: MediaId
 ) => {
   const preloadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
   
@@ -17,25 +15,26 @@ export const usePreloadAdjacentMedia = (
     // you would need to get the actual next/prev media IDs
     // from the parent component or context
     
-    const preloadImage = (url: string): HTMLImageElement => {
-      if (preloadedImages.current.has(url)) {
-        return preloadedImages.current.get(url)!;
-      }
-      
-      const img = new Image();
-      img.src = url;
-      preloadedImages.current.set(url, img);
-      
-      // Clean up old preloaded images if we have too many
-      if (preloadedImages.current.size > 10) {
-        const firstKey = preloadedImages.current.keys().next().value;
-        if (firstKey) {
-          preloadedImages.current.delete(firstKey);
-        }
-      }
-      
-      return img;
-    };
+    // Preload function commented out for now
+    // const preloadImage = (url: string): HTMLImageElement => {
+    //   if (preloadedImages.current.has(url)) {
+    //     return preloadedImages.current.get(url)!;
+    //   }
+    //   
+    //   const img = new Image();
+    //   img.src = url;
+    //   preloadedImages.current.set(url, img);
+    //   
+    //   // Clean up old preloaded images if we have too many
+    //   if (preloadedImages.current.size > 10) {
+    //     const firstKey = preloadedImages.current.keys().next().value;
+    //     if (firstKey) {
+    //       preloadedImages.current.delete(firstKey);
+    //     }
+    //   }
+    //   
+    //   return img;
+    // };
     
     // In a real implementation, you would:
     // 1. Get the list of media items from context
@@ -45,9 +44,11 @@ export const usePreloadAdjacentMedia = (
     // Cleanup function
     return () => {
       // Optionally clear preloaded images on unmount
-      // preloadedImages.current.clear();
+      preloadedImages.current.clear();
     };
   }, [currentId]);
   
-  return preloadedImages.current;
+  return {
+    preloadedImages: preloadedImages.current
+  };
 };

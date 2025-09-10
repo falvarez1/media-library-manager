@@ -5,7 +5,7 @@
  * handling loading states, errors, and API responses with full TypeScript support.
  */
 
-import { useState, useEffect, useCallback, useMemo, DependencyList } from 'react';
+import { useState, useEffect, useCallback, DependencyList } from 'react';
 import api from '../services/api';
 import config from '../services/config';
 
@@ -13,12 +13,10 @@ import config from '../services/config';
 import type {
   ApiResponse,
   PaginatedResponse,
-  ApiError,
   ExtendedApiError,
   ApiConfig,
   MediaItem,
   MediaQuery,
-  MediaFilterOptions,
   UpdateMediaItem,
   Folder,
   FolderTree,
@@ -34,9 +32,7 @@ import type {
   FolderId,
   CollectionId,
   TagId,
-  TagCategoryId,
-  UserId,
-  BatchOperationRequest
+  TagCategoryId
 } from '../types';
 
 // Import tag-related types from the services
@@ -46,9 +42,7 @@ import type {
   PopularTag,
   TagSuggestion,
   CreateTag,
-  UpdateTag,
-  CreateTagCategory,
-  UpdateTagCategory
+  CreateTagCategory
 } from '../services/api/tagsService';
 
 // ============================================================================
@@ -61,18 +55,13 @@ import type {
 type ApiFunction<TParams = any, TData = any> = (params?: TParams) => Promise<ApiResponse<TData>>;
 
 /**
- * API function that takes no parameters
- */
-type ApiNoParamsFunction<TData = any> = () => Promise<ApiResponse<TData>>;
-
-/**
  * Return type for useApi hook
  */
 export interface UseApiReturn<TData> {
   data: TData;
   loading: boolean;
   error: ExtendedApiError | null;
-  refetch: (newParams?: Partial<TParams>) => Promise<TData | null>;
+  refetch: (newParams?: Partial<any>) => Promise<TData | null>;
 }
 
 /**
@@ -165,10 +154,10 @@ export function useApi<TData = any, TParams = any>(
   }, [...deps]);
 
   // Function to update params and refetch
-  const refetch = useCallback((newParams: TParams | null = null): Promise<TData | null> => {
-    if (newParams !== null) {
-      setParams(newParams);
-      return fetchData(newParams);
+  const refetch = useCallback((newParams?: Partial<any>): Promise<TData | null> => {
+    if (newParams !== undefined) {
+      setParams(newParams as TParams);
+      return fetchData(newParams as TParams);
     }
     return fetchData();
   }, [fetchData]);
@@ -376,7 +365,7 @@ export const useDeleteFolder = (): UseMutationReturn<{ success: boolean }, { id:
  */
 export const useFolderContents = (
   id: FolderId, 
-  options: { deleteChildren?: boolean } = {}, 
+  options: { deleteChildren?: boolean; skip?: boolean } = {}, 
   deps?: DependencyList
 ): UseApiReturn<any | null> => {
   // Check if we should skip the API call
@@ -395,8 +384,10 @@ export const useFolderContents = (
       return Promise.resolve({ 
         data: null, 
         success: true,
-        message: 'Skipped'
-      });
+        message: 'Skipped',
+        timestamp: new Date().toISOString(),
+        requestId: `req_${Date.now()}`
+      } as ApiResponse<any>);
     }
     return api.folders.getFolderContents(id, options);
   }, [id, optionsStr, shouldSkip]);
@@ -1162,7 +1153,7 @@ export const useDataSource = (): DataSourceConfig => {
     isUsingRealApi: config.useRealApi,
     apiBaseUrl: config.apiBaseUrl,
     dataSource: config.useRealApi ? 'real' : 'mock',
-    config
+    config: config as unknown as ApiConfig
   };
 };
 

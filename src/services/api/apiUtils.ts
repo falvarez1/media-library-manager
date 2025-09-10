@@ -3,7 +3,7 @@
  */
 import config from '../config';
 import storage from '../../utils/storage';
-import { ExtendedApiError, RequestOptions, ApiErrorCode } from '../../types/api.types';
+import { ExtendedApiError, ApiErrorCode } from '../../types/api.types';
 
 /**
  * Extended error with API context

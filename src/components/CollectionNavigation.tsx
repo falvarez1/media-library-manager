@@ -7,7 +7,9 @@ import ConfirmationDialog from './ConfirmationDialog';
 import {
   Collection,
   CollectionId,
-  HexColor
+  HexColor,
+  CreateCollection,
+  UpdateCollection
 } from '../types';
 
 // Collection form data interface to match CollectionModal
@@ -56,11 +58,12 @@ const CollectionNavigation: React.FC = () => {
   // Create new collection
   const handleCreateCollection = async (collectionData: CollectionFormData): Promise<void> => {
     try {
-      const dataForApi: Partial<Collection> = {
-        name: collectionData.name,
+      const dataForApi: CreateCollection = {
+        name: collectionData.name!,
         description: collectionData.description,
         color: collectionData.color as HexColor,
         isShared: collectionData.isShared,
+        sharedWith: [],
         parentId: collectionData.parentId || parentIdForNew
       };
       await createCollection(dataForApi);
@@ -76,14 +79,14 @@ const CollectionNavigation: React.FC = () => {
     if (!selectedCollectionId) return;
     
     try {
-      const dataForApi: Partial<Collection> = {
+      const dataForApi: UpdateCollection = {
         name: collectionData.name,
         description: collectionData.description,
         color: collectionData.color as HexColor,
         isShared: collectionData.isShared,
         parentId: collectionData.parentId
       };
-      await updateCollection(selectedCollectionId, dataForApi);
+      await updateCollection({ id: selectedCollectionId, updates: dataForApi });
       setShowEditCollectionModal(false);
       setSelectedCollectionId(null);
     } catch (error) {
@@ -96,7 +99,7 @@ const CollectionNavigation: React.FC = () => {
     if (!selectedCollectionId) return;
     
     try {
-      await deleteCollection(selectedCollectionId);
+      await deleteCollection({ id: selectedCollectionId });
       setShowDeleteConfirmation(false);
       setSelectedCollectionId(null);
     } catch (error) {

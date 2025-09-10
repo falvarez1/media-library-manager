@@ -1,6 +1,6 @@
 'use client';
 
-import React, {
+import {
   createContext,
   useContext,
   useCallback,
@@ -14,9 +14,6 @@ import {
   SortField, 
   SortOrder, 
   TagId,
-  MediaType,
-  FolderId,
-  Status,
   DateString 
 } from '../types';
 

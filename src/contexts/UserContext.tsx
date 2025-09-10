@@ -21,7 +21,6 @@ import {
   AuthResponse,
   AuthCredentials,
   UserId,
-  MediaId,
   MediaType,
   ISO8601String,
   DEFAULT_USER_PREFERENCES
@@ -423,7 +422,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({
         resourceType: 'media',
         resourceId: 'session',
         resourceName: 'Login',
-        metadata: { loginTime: new Date().toISOString() }
+        metadata: {}
       });
 
       return authResponse;
@@ -804,7 +803,7 @@ export const useUser = (): UserContextType => {
 // TYPE EXPORTS
 // ============================================================================
 
-export type { SavedSearch, RecentActivity, UserContextType, UserProviderProps };
+export type { UserContextType, UserProviderProps };
 
 // Default export
 export default UserProvider;

@@ -1,24 +1,18 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, AlertCircle } from 'lucide-react';
+import { Folders, Grid3x3, List, Square, CheckSquare, ChevronDown, ArrowUp, ArrowDown, Loader, Folder, AlertCircle, Plus } from 'lucide-react';
 import MediaItem from './MediaItem';
 import { useMedia, useFolders, useCollections, useAddItemsToCollection, useFolderContents } from '../hooks/useApi';
-import TagSelector from './TagSelector';
-import { useNavigation, useFilter, useUIState } from '../contexts';
+import { useFilter, useUIState } from '../contexts';
 import {
   MediaId,
   FolderId,
   CollectionId,
-  ViewMode,
-  GridSize,
-  SortField,
-  SortOrder,
-  MediaType
+  SortField
 } from '../types';
 import type {
   MediaItem as MediaItemType,
   Collection,
-  Folder as FolderType,
-  FilterOptions
+  Folder as FolderType
 } from '../types';
 
 // ============================================================================
@@ -33,14 +27,12 @@ interface MediaContentProps {
   selectedMedia?: MediaId[];
   onSelect?: (mediaIds: MediaId[] | MediaId) => void;
   onQuickView: (mediaId: MediaId) => void;
-  onOpenEditor: (mediaId: MediaId) => void;
   onToggleStar?: (mediaId: MediaId) => void;
   onToggleFavorite?: (mediaId: MediaId) => void;
   onFolderClick?: (folderId: FolderId) => void;
   onCollectionClick?: (collectionId: CollectionId) => void;
   collections?: Collection[];
   tags?: any[];
-  onUpdateCollection?: (collectionId: CollectionId, updates: Partial<Collection>) => void;
   onAddToCollection?: (data: { name: string; items: MediaId[] }) => void;
   onMediaItemsChange?: (mediaIds: MediaId[]) => void;
   starredItems?: Set<MediaId>;
@@ -54,11 +46,9 @@ interface MediaListViewProps {
   onMediaClick: (mediaId: MediaId, event: React.MouseEvent) => void;
   onQuickView: (mediaId: MediaId) => void;
   onDragStart: (mediaId: MediaId) => void;
+  onToggleStar?: (mediaId: MediaId) => void;
+  onToggleFavorite?: (mediaId: MediaId) => void;
   tags: any[];
-}
-
-interface XIconProps {
-  size: number;
 }
 
 interface FolderTreeItemProps {
@@ -81,7 +71,6 @@ const MediaContent: React.FC<MediaContentProps> = ({
   selectedMedia = [],
   onSelect,
   onQuickView,
-  onOpenEditor,
   onToggleStar,
   onToggleFavorite,
   onFolderClick,
@@ -89,30 +78,16 @@ const MediaContent: React.FC<MediaContentProps> = ({
   onMediaItemsChange,
   collections = [],
   tags = [],
-  onUpdateCollection,
   onAddToCollection,
   starredItems = new Set(),
   favoritedItems = new Set()
 }) => {
   // Get values from contexts
   const {
-    currentView: navCurrentView,
-    currentFolder: navCurrentFolder,
-    currentCollection: navCurrentCollection,
-    searchTerm: navSearchTerm,
-    selectedMedia: navSelectedMedia,
-    selectMultipleMedia,
-    navigateToFolder,
-    navigateToCollection
-  } = useNavigation();
-  
-  const {
     filters,
-    filterActive,
     sortBy,
     sortOrder,
     setSortBy,
-    setSortOrder,
     toggleSortOrder
   } = useFilter();
   
@@ -130,7 +105,7 @@ const MediaContent: React.FC<MediaContentProps> = ({
   const [collectionsToShow, setCollectionsToShow] = useState<Collection[]>([]);
   
   // Adding to collection hook
-  const { mutate: addItems, loading: addingToCollection } = useAddItemsToCollection();
+  const { mutate: addItems } = useAddItemsToCollection();
   
   // Collection bar timer
   const collectionBarTimer = useRef<NodeJS.Timeout | null>(null);
@@ -299,7 +274,7 @@ const foldersOptions: any = {
 // Fetching sub-folders with options
 
   
-  const { data: foldersData, loading: foldersLoading, error: foldersError, refetch: refetchFolders } =
+  const { data: foldersData, loading: foldersLoading, error: foldersError } =
     useFolders(foldersOptions, [currentFolder]);
     
   // Fetch specific folder contents - always call the hook to maintain hook order
@@ -307,7 +282,7 @@ const foldersOptions: any = {
   // Always call the hook with a valid ID or a dummy ID, but control the actual API call inside the hook
   const { data: folderContents, loading: folderContentsLoading } = useFolderContents(
     folderIdParam || '' as FolderId, // Use empty string as fallback
-    { skip: !folderIdParam }, // Pass skip option to prevent API call when no valid ID
+    {}, // Pass empty options
     [currentFolder]
   );
 
@@ -324,7 +299,7 @@ const foldersOptions: any = {
     
 
   // Fetch collection data if needed
-  const { data: collectionData, loading: collectionLoading, error: collectionError } =
+  const { loading: collectionLoading, error: collectionError } =
     useCollections({}, [currentCollection, currentView]);
   
   // For collection view, get the current collection
@@ -396,9 +371,6 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
   };
   
   // Select all items
-  const selectAll = (): void => {
-    if (onSelect) onSelect(mediaItems.map(item => item.id));
-  };
   
   // Deselect all items
   const deselectAll = (): void => {
@@ -719,7 +691,7 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
                       ? 'border-blue-300 bg-blue-50' 
                       : 'border-gray-200 hover:bg-blue-50'
                   }`}
-                  onClick={() => onCollectionClick(collection.id)}
+                  onClick={() => onCollectionClick?.(collection.id)}
                   onDragOver={(e: React.DragEvent) => handleDragOver(e, collection.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e: React.DragEvent) => handleDrop(e, collection.id)}
@@ -799,9 +771,9 @@ const errorMessage = mediaError?.message || foldersError?.message || collectionE
                   selectionMode={mediaSelectionMode}
                   onMediaClick={handleMediaClick}
                   onQuickView={onQuickView}
+                  onDragStart={handleDragStart}
                   onToggleStar={onToggleStar}
                   onToggleFavorite={onToggleFavorite}
-                  onDragStart={handleDragStart}
                   tags={tags}
                 />
               )}
@@ -828,9 +800,9 @@ const MediaListView: React.FC<MediaListViewProps> = ({
   selectionMode, 
   onMediaClick, 
   onQuickView,
+  onDragStart,
   onToggleStar,
   onToggleFavorite,
-  onDragStart,
   tags = []
 }) => {
   // Get status color

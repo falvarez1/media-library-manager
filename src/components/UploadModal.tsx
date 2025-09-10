@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { X, Upload, File, Image, Video, Music, FileText, AlertCircle, CheckCircle, Loader } from 'lucide-react';
-import { MediaType } from '../types';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -40,13 +39,6 @@ const UploadModal: React.FC<UploadModalProps> = ({
     return <File size={20} className="text-gray-500" />;
   };
   
-  const getMediaType = (file: File): MediaType => {
-    const type = file.type;
-    if (type.startsWith('image/')) return 'image';
-    if (type.startsWith('video/')) return 'video';
-    if (type.startsWith('audio/')) return 'audio';
-    return 'document';
-  };
   
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';

@@ -2,12 +2,10 @@ import React from 'react';
 import { X, ChevronDown, Loader } from 'lucide-react';
 import { useTags } from '../hooks/useApi';
 import { useFilter } from '../contexts';
-import { useUIState } from '../contexts/UIStateContext';
 import {
   MediaType,
   TagId,
-  Status,
-  ChangeEvent
+  Status
 } from '../types';
 
 interface FilterBarProps {

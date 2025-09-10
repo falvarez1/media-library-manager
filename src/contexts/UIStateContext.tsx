@@ -1,6 +1,6 @@
 'use client';
 
-import React, {
+import {
   createContext,
   useContext,
   useReducer,
@@ -534,4 +534,3 @@ export function useUIState(): UIStateContextValue {
 
 export default UIStateContext;
 export { KEYBOARD_SHORTCUTS, STORAGE_KEYS };
-export type { UIState, UIAction, SidebarTab, UIStateContextValue, UIStateProviderProps };

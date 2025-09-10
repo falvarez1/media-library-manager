@@ -14,7 +14,6 @@ import {
   Folder,
   Library,
   Tags,
-  X
 } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -88,8 +87,6 @@ function getSidebarSectionName(section?: string): string {
 // ============================================================================
 
 function SidebarErrorFallback({
-  error,
-  errorInfo,
   retry,
   sidebarSection,
   isCollapsible,
